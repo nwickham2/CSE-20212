@@ -8,7 +8,8 @@
 CodeEditor::CodeEditor(QWidget *parent) : QPlainTextEdit(parent)
 {
     lineNumberArea = new LineNumberArea(this);
-
+dolinenums = 0;
+dolinelight = 0;
     connect(this, SIGNAL(blockCountChanged(int)), this, SLOT(updateLineNumberAreaWidth(int)));
     connect(this, SIGNAL(updateRequest(QRect,int)), this, SLOT(updateLineNumberArea(QRect,int)));
     connect(this, SIGNAL(cursorPositionChanged()), this, SLOT(highlightCurrentLine()));
@@ -20,7 +21,7 @@ CodeEditor::CodeEditor(QWidget *parent) : QPlainTextEdit(parent)
 CodeEditor::CodeEditor(const QString & text, QWidget *parent) : QPlainTextEdit(text, parent)
 {
     lineNumberArea = new LineNumberArea(this);
-
+dolinenums = 0;
     connect(this, SIGNAL(blockCountChanged(int)), this, SLOT(updateLineNumberAreaWidth(int)));
     connect(this, SIGNAL(updateRequest(QRect,int)), this, SLOT(updateLineNumberArea(QRect,int)));
     connect(this, SIGNAL(cursorPositionChanged()), this, SLOT(highlightCurrentLine()));
@@ -29,8 +30,32 @@ CodeEditor::CodeEditor(const QString & text, QWidget *parent) : QPlainTextEdit(t
     highlightCurrentLine();
 }
 
+void CodeEditor::uninit()
+{
+updateLineNumberAreaWidth(-1);
+highlightCurrentLine();
+}
+
+void CodeEditor::init()
+{
+    updateLineNumberAreaWidth(0);
+    highlightCurrentLine();
+}
+
+void CodeEditor::setdolines(int x)
+{
+  dolinenums = x;
+}
+
+void CodeEditor::setdolinelight(int x)
+{
+    dolinelight = x;
+}
+
 int CodeEditor::lineNumberAreaWidth()
 {
+    if(dolinenums)
+    {
     int digits = 1;
     int max = qMax(1, blockCount());
     while (max >= 10) {
@@ -41,6 +66,8 @@ int CodeEditor::lineNumberAreaWidth()
     int space = 3 + fontMetrics().width(QLatin1Char('9')) * digits;
 
     return space;
+    }
+    return 0;
 }
 
 void CodeEditor::updateLineNumberAreaWidth(int /* newBlockCount */)
@@ -69,12 +96,17 @@ void CodeEditor::resizeEvent(QResizeEvent *e)
 
 void CodeEditor::highlightCurrentLine()
 {
+
     QList<QTextEdit::ExtraSelection> extraSelections;
 
     if (!isReadOnly()) {
         QTextEdit::ExtraSelection selection;
 
-        QColor lineColor = QColor(Qt::yellow).lighter(160);
+        QColor lineColor = QColor(Qt::yellow).lighter(250);
+        if(dolinelight)
+        lineColor.setAlpha(50);
+        else
+            lineColor.setAlpha(0);
 
         selection.format.setBackground(lineColor);
         selection.format.setProperty(QTextFormat::FullWidthSelection, true);
@@ -84,12 +116,15 @@ void CodeEditor::highlightCurrentLine()
     }
 
     setExtraSelections(extraSelections);
+
 }
 
 void CodeEditor::lineNumberAreaPaintEvent(QPaintEvent *event)
  {
+    if(dolinenums)
+    {
      QPainter painter(lineNumberArea);
-     painter.fillRect(event->rect(), Qt::lightGray);
+     painter.fillRect(event->rect(), BackgroundColor);
      QTextBlock block = firstVisibleBlock();
           int blockNumber = block.blockNumber();
           int top = (int) blockBoundingGeometry(block).translated(contentOffset()).top();
@@ -97,7 +132,7 @@ void CodeEditor::lineNumberAreaPaintEvent(QPaintEvent *event)
           while (block.isValid() && top <= event->rect().bottom()) {
               if (block.isVisible() && bottom >= event->rect().top()) {
                   QString number = QString::number(blockNumber + 1);
-                  painter.setPen(Qt::black);
+                  painter.setPen(NumbersColor);
                   painter.drawText(0, top, lineNumberArea->width(), fontMetrics().height(),
                                    Qt::AlignRight, number);
               }
@@ -107,4 +142,23 @@ void CodeEditor::lineNumberAreaPaintEvent(QPaintEvent *event)
               bottom = top + (int) blockBoundingRect(block).height();
               ++blockNumber;
           }
+    }
       }
+void CodeEditor::setColors(int x)
+{
+    if(x ==1)
+    {
+BackgroundColor.setRgb(214, 214, 214);
+NumbersColor.setRgb(255, 0, 255);
+    }
+    else if(x == 2)
+    {
+        BackgroundColor.setRgb(39,64,139);
+        NumbersColor.setRgb(176, 196, 222);
+    }
+    else if(x == 3)
+    {
+        BackgroundColor.setRgb(218, 165, 32);
+        NumbersColor.setRgb(139, 137, 137);
+    }
+}

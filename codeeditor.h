@@ -2,6 +2,7 @@
 #define CODEEDITOR_H
 
 #include <QPlainTextEdit>
+#include <QColor>
 
 class CodeEditor : public QPlainTextEdit
 {
@@ -12,6 +13,11 @@ public:
 
     void lineNumberAreaPaintEvent(QPaintEvent *event);
     int lineNumberAreaWidth();
+    void setdolines(int);
+    void setdolinelight(int);
+    void init();
+    void uninit();
+    void setColors(int);
 
 protected:
     void resizeEvent(QResizeEvent *event);
@@ -28,6 +34,10 @@ private slots:
 
 private:
          QWidget *lineNumberArea;
+         int dolinenums;
+         int dolinelight;
+         QColor BackgroundColor;
+         QColor NumbersColor;
     
 };
 

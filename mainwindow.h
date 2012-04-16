@@ -18,6 +18,8 @@
 #include <QFileSystemModel>
 #include <QTreeView>
 #include <QTreeWidget>
+#include <QActionGroup>
+#include <QLabel>
 
 #include "highlighter.h"
 #include "linenumberarea.h"
@@ -36,6 +38,7 @@ public:
 
     void updateRecentFileActions();
     static QStringList recentFiles;
+    static int currentScheme;
 
 
 protected:
@@ -58,6 +61,13 @@ private slots:
 
     void syntaxHighlight(bool);
     void doLineNumbers(bool);
+    void doLineHighLight(bool);
+    void lineWrapSlot(bool);
+    void selectDarkColorScheme(bool x);
+    void selectBlueColorScheme(bool);
+    void selectStandardColorScheme(bool);
+    void hideScratch(bool);
+    void updateStatusBar();
   //void updateStatusBar();
   //void openTree();
 
@@ -80,6 +90,13 @@ private:
   //void createStatusBar();
 
 
+    int is_highlighter;
+    int lineNumbers;
+    int syntax;
+    int lineHighlight;
+    int hidescratch;
+    int linewrap;
+
 
     Highlighter *highlighter;
 
@@ -88,10 +105,12 @@ private:
 
     QPlainTextEdit *scratcharea1;
     QPlainTextEdit *scratcharea2;
-    QPlainTextEdit *textarea;
+    CodeEditor *textarea;
 
     QToolBar *fileToolBar;
     QToolBar *editToolBar;
+    QToolBar *optionsToolBar;
+    QToolBar *toolsToolBar;
 
     QMenu *fileMenu;
     QMenu *editMenu;
@@ -99,6 +118,7 @@ private:
     QMenu *toolsMenu;
     QMenu *optionsMenu;
     QMenu *helpMenu;
+    QMenu *colorSchemeSubMenu;
 
     QAction *newAction;
     QAction *saveAction;
@@ -120,9 +140,20 @@ private:
     QAction *cppSyntax;
     QAction *recentFileActions[MaxRecentFiles];
     QAction *lineNumberAction;
+    QAction *lineHighLightAction;
+    QAction *lineWrapAction;
+    QAction *darkSchemeAction;
+    QAction *blueSchemeAction;
+    QAction *standardSchemeAction;
+    QAction *hideScratchAction;
 
     QDockWidget *dock1;
     QDockWidget *dock2;
+
+    QActionGroup *Schemes;
+
+    QLabel *curLine;
+    QLabel curColumn;
     //QDockWidget *files;
 
     //QSplitter *splitter2;

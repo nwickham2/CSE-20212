@@ -24,18 +24,28 @@
 #include <QSplitter>
 #include <iostream>
 #include <QAbstractItemView>
+#include <QPalette>
+#include <QColor>
 
-//#include "linenumberarea.h"
-//#include "codeeditor.h"
 
 using namespace std;
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
-textarea = new QPlainTextEdit;
+    MainWindow::currentScheme = 3;
+textarea = new CodeEditor;
 setCentralWidget(textarea);
 setAttribute(Qt::WA_DeleteOnClose);
+textarea->setLineWrapMode(QPlainTextEdit::NoWrap);
+QPalette p = textarea->palette();
+QColor backcolor(255, 255, 255);
+p.setColor(QPalette::Base, backcolor);
+QColor fontcolor(0, 0, 0);
+p.setColor(QPalette::Text, fontcolor);
+textarea->setPalette(p);
+
+is_highlighter = 0;
 
 createActions();
 createMenus();
@@ -43,7 +53,52 @@ createToolBars();
 readSettings();
 setCurrentFile("");
 
-statusBar()->showMessage(tr("Welcome to NotePad2"));
+if(MainWindow::currentScheme == 1)
+    darkSchemeAction->setChecked(true);
+    else if(MainWindow::currentScheme == 2)
+    blueSchemeAction->setChecked(true);
+    else if(MainWindow::currentScheme == 3)
+    standardSchemeAction->setChecked(true);
+/*
+if(lineNumbers)
+{
+    lineNumberAction->setChecked(true);
+}
+
+    if(syntax)
+    {
+        cppSyntax->setChecked(true);
+    }
+    else cppSyntax->setChecked(false);
+
+        if(lineHighlight)
+        {
+            lineHighLightAction->setChecked(true);
+        }
+        else lineHighLightAction->setChecked(false);
+
+            if(hidescratch)
+            {
+                hideScratchAction->setChecked(true);
+            }
+            else hideScratchAction->setChecked(false);
+
+                if(linewrap)
+                {
+                    lineWrapAction->setChecked(true);
+                }
+                else lineWrapAction->setChecked(false);
+*/
+                QString msg = QString( "Line Count: %1, Cursor Text Position: %2, column: %3" )
+                        .arg( textarea->document()->lineCount() )
+                        .arg( textarea->textCursor().blockNumber() +1 )
+                        .arg( textarea->textCursor().columnNumber()+1 );
+
+                    //statusBar()->showMessage( msg );
+                curLine = new QLabel(msg);
+                statusBar()->addWidget(curLine);
+
+connect(textarea, SIGNAL(cursorPositionChanged()), this, SLOT(updateStatusBar()));
 
 dock1 = new QDockWidget(tr("scratch area"), this);
 dock2 = new QDockWidget(tr("scratch area"), this);
@@ -58,8 +113,20 @@ dock2->setFeatures(QDockWidget::NoDockWidgetFeatures);
 dock1->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
 dock2->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
 tabifyDockWidget(dock1, dock2);
+/*
+if(hidescratch)
+{
+    hideScratchAction->setChecked(true);
+    removeDockWidget(dock1);
+    removeDockWidget(dock2);
+}
+else
+{hideScratchAction->setChecked(false);
+    restoreDockWidget(dock1);
+    restoreDockWidget(dock2);
+}
 
-
+*/
 //createContextMenu();
 //createStatusBar();
 
@@ -73,6 +140,19 @@ tree = new QTreeView(splitter);
          files = new QDockWidget(tr("Files"), this);
          addDockWidget(Qt::LeftDockWidgetArea, files);
          files->setWidget(splitter);*/
+}
+
+void MainWindow::updateStatusBar()
+{
+    QString msg = QString( "Line Count: %1, Cursor Text Position: %2, column: %3" )
+            .arg( textarea->document()->lineCount() )
+            .arg( textarea->textCursor().blockNumber()+1 )
+            .arg( textarea->textCursor().columnNumber()+1 );
+
+        statusBar()->showMessage( msg );
+    //delete curLine;
+    //curLine->setText(msg);
+
 }
 
 MainWindow::~MainWindow()
@@ -179,10 +259,124 @@ void MainWindow::createActions()
 
     lineNumberAction = new QAction(tr("&Line Numbers"), this);
     lineNumberAction->setCheckable(true);
-    lineNumberAction->setStatusTip(tr("Highlight the document with C++ syntax"));
+    lineNumberAction->setStatusTip(tr("Add line numbers"));
     connect(lineNumberAction, SIGNAL(toggled(bool)), this, SLOT(doLineNumbers(bool)));
 
+    lineHighLightAction = new QAction(tr("&Line Highlight"), this);
+    lineHighLightAction->setCheckable(true);
+    //lineHighLightAction->setChecked(false);
+    lineHighLightAction->setStatusTip(tr("Highlight current line"));
+    connect(lineHighLightAction, SIGNAL(toggled(bool)), this, SLOT(doLineHighLight(bool)));
+
+    lineWrapAction = new QAction(tr("Lines wrap"), this);
+    lineWrapAction->setCheckable(true);
+    lineWrapAction->setStatusTip(tr("Lines wrap"));
+    connect(lineWrapAction, SIGNAL(toggled(bool)), this, SLOT(lineWrapSlot(bool)));
+
+    darkSchemeAction = new QAction(tr("Dark color scheme"), this);
+    darkSchemeAction->setCheckable(true);
+    darkSchemeAction->setToolTip(tr("A color scheme utilizing dark tones"));
+    connect(darkSchemeAction, SIGNAL(toggled(bool)), this, SLOT(selectDarkColorScheme(bool)));
+
+    blueSchemeAction = new QAction(tr("Blue color scheme"), this);
+    blueSchemeAction->setCheckable(true);
+    blueSchemeAction->setToolTip(tr("A color scheme based on blues"));
+    connect(blueSchemeAction, SIGNAL(toggled(bool)), this, SLOT(selectBlueColorScheme(bool)));
+
+    standardSchemeAction = new QAction(tr("Standard color scheme"), this);
+    standardSchemeAction->setCheckable(true);
+    standardSchemeAction->setToolTip(tr("A basic color scheme"));
+    connect(standardSchemeAction, SIGNAL(toggled(bool)), this, SLOT(selectStandardColorScheme(bool)));
+
+    hideScratchAction = new QAction(tr("Hide scratch areas"), this);
+    hideScratchAction->setCheckable(true);
+    //hideScratchAction->setChecked (true);
+    hideScratchAction->setToolTip(tr("Hides the scratch areas, but keeps the data intact"));
+    connect(hideScratchAction, SIGNAL(toggled(bool)), this, SLOT(hideScratch(bool)));
+
   //connect(tree, SIGNAL(clicked(QModelIndex)), this, SLOT(openTree()));
+}
+
+void MainWindow::hideScratch(bool x)
+{
+    if(x == true)
+    {
+removeDockWidget(dock1);
+removeDockWidget(dock2);
+hidescratch = 1;
+    }
+    else if(x == false)
+    {
+        restoreDockWidget(dock1);
+    restoreDockWidget(dock2);
+    hidescratch = 0;
+    }
+}
+
+void MainWindow::selectDarkColorScheme(bool x)
+{
+    if(x == true)
+    {
+        if(cppSyntax->isChecked())
+        {
+            delete highlighter;
+        MainWindow::currentScheme = 1;
+        highlighter = new Highlighter(textarea->document(), MainWindow::currentScheme);
+        }
+        else
+            MainWindow::currentScheme = 1;
+        QPalette p = textarea->palette();
+        QColor backcolor(38, 38, 38);
+        p.setColor(QPalette::Base, backcolor);
+        QColor fontcolor(214, 214, 214);
+        p.setColor(QPalette::Text, fontcolor);
+        textarea->setPalette(p);
+        textarea->setColors(MainWindow::currentScheme);
+}
+}
+
+void MainWindow::selectBlueColorScheme(bool x)
+{
+    if(x == true)
+    {
+        if(cppSyntax->isChecked())
+        {
+            delete highlighter;
+        MainWindow::currentScheme = 2;
+        highlighter = new Highlighter(textarea->document(), MainWindow::currentScheme);
+        }
+        else
+            MainWindow::currentScheme = 2;
+        QPalette p = textarea->palette();
+        QColor backcolor(0, 30, 60);
+        p.setColor(QPalette::Base, backcolor);
+        QColor fontcolor(176, 196, 222);
+        p.setColor(QPalette::Text, fontcolor);
+        textarea->setPalette(p);
+        textarea->setColors(MainWindow::currentScheme);
+}
+}
+
+void MainWindow::selectStandardColorScheme(bool x)
+{
+    if(x == true)
+    {
+        if(cppSyntax->isChecked())
+        {
+            delete highlighter;
+        MainWindow::currentScheme = 3;
+        highlighter = new Highlighter(textarea->document(), MainWindow::currentScheme);
+        }
+        else
+            MainWindow::currentScheme = 3;
+        QPalette p = textarea->palette();
+        QColor backcolor(255, 255, 255);
+        p.setColor(QPalette::Base, backcolor);
+        QColor fontcolor(0, 0, 0);
+        p.setColor(QPalette::Text, fontcolor);
+        textarea->setPalette(p);
+        textarea->setColors(MainWindow::currentScheme);
+}
 }
 
 void MainWindow::createMenus()
@@ -216,8 +410,23 @@ void MainWindow::createMenus()
     toolsMenu = menuBar()->addMenu(tr("&Tools"));
     toolsMenu->addAction(cppSyntax);
     toolsMenu->addAction(lineNumberAction);
+    toolsMenu->addAction(lineHighLightAction);
 
     optionsMenu = menuBar()->addMenu(tr("&Options"));
+    optionsMenu->addAction(lineWrapAction);
+    optionsMenu->addAction(hideScratchAction);
+    colorSchemeSubMenu = optionsMenu->addMenu(tr("Color Scheme..."));
+
+    Schemes = new QActionGroup(this);
+    Schemes->addAction(darkSchemeAction);
+    Schemes->addAction(blueSchemeAction);
+    Schemes->addAction(standardSchemeAction);
+
+
+    colorSchemeSubMenu->addAction(darkSchemeAction);
+    colorSchemeSubMenu->addAction(blueSchemeAction);
+    colorSchemeSubMenu->addAction(standardSchemeAction);
+
     menuBar()->addSeparator();
 
     helpMenu = menuBar()->addMenu(tr("&Help"));
@@ -238,6 +447,17 @@ editToolBar->addAction(cutAction);
 editToolBar->addAction(copyAction);
 editToolBar->addAction(pasteAction);
 editToolBar->addSeparator();
+editToolBar->addAction(undoAction);
+editToolBar->addAction(redoAction);
+
+toolsToolBar = addToolBar(tr("&Tools"));
+toolsToolBar->addAction(cppSyntax);
+toolsToolBar->addAction(lineNumberAction);
+toolsToolBar->addAction(lineHighLightAction);
+
+optionsToolBar = addToolBar(tr("&Options"));
+optionsToolBar->addAction(lineWrapAction);
+optionsToolBar->addAction(hideScratchAction);
 //editToolBar->addAction(findAction);
 //editToolBar->addAction(goToCellAction);
 }
@@ -268,13 +488,55 @@ void MainWindow::deletef()
 void MainWindow::syntaxHighlight(bool x)
 {
     if(x == true)
-        highlighter = new Highlighter(textarea->document());
+    {
+        syntax = 1;
+        is_highlighter = 1;
+        highlighter = new Highlighter(textarea->document(), MainWindow::currentScheme);
+    }
     else
+    {
+        syntax = 0;
         delete highlighter;
+        is_highlighter = 0;
+    }
+}
+
+void MainWindow::lineWrapSlot(bool x)
+{
+    if(x == true)
+    {
+        textarea->setLineWrapMode(QPlainTextEdit::WidgetWidth);
+        linewrap = 1;
+    }
+        else
+    {
+        textarea->setLineWrapMode(QPlainTextEdit::NoWrap);
+        linewrap = 0;
+    }
+
+
+}
+
+void MainWindow::doLineHighLight(bool x)
+{
+    if(x == true)
+    {
+        lineHighlight = 1;
+        textarea->setdolinelight(1);
+        textarea->init();
+    }
+    else
+    {
+        lineHighlight = 0;
+        textarea->setdolinelight(0);
+        textarea->uninit();
+    }
 }
 
 void MainWindow::doLineNumbers(bool x)
 {
+  /*  if(is_highlighter)
+        delete highlighter;
     QTabWidget::TabPosition order;
     order = tabPosition(Qt::BottomDockWidgetArea);
     QString temp, temp1, temp2;
@@ -282,20 +544,28 @@ void MainWindow::doLineNumbers(bool x)
     setCentralWidget(holder);
     temp = textarea->toPlainText();
     temp1 = scratcharea1->toPlainText();
-    temp2 = scratcharea2->toPlainText();
+    temp2 = scratcharea2->toPlainText();*/
     if(x == true)
     {
-        delete textarea;
-        textarea = new CodeEditor(temp);
+        lineNumbers = 1;
+        textarea->setdolines(1);
+        textarea->init();
+      //  delete textarea;
+     //   textarea = new CodeEditor(temp);
     }
     else
     {
-        delete textarea;
-        textarea = new QPlainTextEdit(temp);
+        lineNumbers = 0;
+        textarea->setdolines(0);
+        textarea->uninit();
+      //  delete textarea;
+      //  textarea = new QPlainTextEdit(temp);
     }
-    setCentralWidget(textarea);
+   /* setCentralWidget(textarea);
     createActions();
 
+    if(is_highlighter)
+        highlighter = new Highlighter(textarea->document());
     delete dock1;
     delete dock2;
     dock1 = new QDockWidget(tr("scratch area"), this);
@@ -312,6 +582,11 @@ void MainWindow::doLineNumbers(bool x)
     dock2->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
     tabifyDockWidget(dock1, dock2);
     setTabPosition(Qt::BottomDockWidgetArea, order);
+    QPalette p = textarea->palette();
+    p.setColor(QPalette::Base, Qt::black);
+    p.setColor(QPalette::Text, Qt::magenta);
+    textarea->setPalette(p);
+    textarea->setLineWrapMode(QPlainTextEdit::NoWrap);*/
 }
 
 
@@ -357,15 +632,35 @@ bool MainWindow::loadFile(const QString &fileName)
             statusBar() -> showMessage(tr("Loading cancelled"), 2000);
             return false;
         }
+
+        /*QFile file("box.txt");
+ if (file.open(QFile::ReadOnly)) {
+     char buf[1024];
+     qint64 lineLength = file.readLine(buf, sizeof(buf));
+     if (lineLength != -1) {
+         // the line is available in buf
+     }
+ } */
 textarea->clear();
+QPalette p = textarea->palette();
+QColor color = p.color(QPalette::Active, QPalette::Text);
+color.setAlpha(0);
+p.setColor(QPalette::Text, color);
+textarea->setPalette(p);
         QTextStream in(&file);
         while (!in.atEnd())
         {
             QString line = in.readLine();
             textarea->appendPlainText(line);
+            textarea -> moveCursor (QTextCursor::Start) ;
         }
     setCurrentFile(fileName);
     statusBar() -> showMessage(tr("File loaded"), 2000);
+    textarea -> moveCursor (QTextCursor::Start) ;
+    textarea -> ensureCursorVisible() ;
+    color.setAlpha(255);
+    p.setColor(QPalette::Text, color);
+    textarea->setPalette(p);
     return true;
 }
 
@@ -489,6 +784,13 @@ void MainWindow::writeSettings()
 QSettings settings("FundComp", "NotePad2");
 settings.setValue("geometry", geometry());
 settings.setValue("recentFiles", MainWindow::recentFiles);
+settings.setValue("currentScheme", MainWindow::currentScheme);
+//settings.setValue("lineNumbers", MainWindow::lineNumbers);
+//settings.setValue("syntax", MainWindow::syntax);
+//settings.setValue("lineHighlight", MainWindow::lineHighlight);
+//settings.setValue("hidescratch", MainWindow::hidescratch);
+//settings.setValue("linewrap", MainWindow::linewrap);
+
 }
 
 void MainWindow::readSettings()
@@ -499,6 +801,14 @@ QRect(200, 200, 400, 400)).toRect();
 move(rect.topLeft());
 resize(rect.size());
 MainWindow::recentFiles = settings.value("recentFiles").toStringList();
+MainWindow::currentScheme = settings.value("currentScheme").toInt();
+//MainWindow::lineNumbers = settings.value("lineNumbers").toInt();
+//MainWindow::syntax = settings.value("syntax").toInt();
+//MainWindow::lineHighlight = settings.value("lineHighlight").toInt();
+//MainWindow::hidescratch = settings.value("hidescratch").toInt();
+//MainWindow::linewrap = settings.value("linewrap").toInt();
+
+
 foreach (QWidget *win, QApplication::topLevelWidgets())
 {
 if (MainWindow *mainWin = qobject_cast<MainWindow *>(win))
