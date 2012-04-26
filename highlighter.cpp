@@ -1,5 +1,28 @@
 #include "highlighter.h"
+#include "codeeditor.h"
+#include <QTextBlockUserData>
 #include <QColor>
+
+TextBlockData::TextBlockData()
+{
+    // Nothing to do
+}
+
+QVector<ParenthesisInfo *> TextBlockData::parentheses()
+{
+    return m_parentheses;
+}
+
+
+void TextBlockData::insert(ParenthesisInfo *info)
+{
+    int i = 0;
+    while (i < m_parentheses.size() &&
+        info->position > m_parentheses.at(i)->position)
+        ++i;
+
+    m_parentheses.insert(i, info);
+}
 
 Highlighter::Highlighter(QTextDocument *parent, int x)
     : QSyntaxHighlighter(parent)
@@ -15,7 +38,7 @@ Highlighter::Highlighter(QTextDocument *parent, int x)
     quotationFormat.setForeground(quotationColor);
     //quotationFormat.setFontWeight(QFont::Bold);
     QStringList quotationPatterns;
-    quotationPatterns << "\'.*\'" << "\".*\""; // << "\\b#include \<.*[A-Za-z]\> \\b";
+    quotationPatterns << "\'.*\'" << "\".*\"" << "<[A-Za-z0-9]+>";
     foreach(const QString &pattern, quotationPatterns)
     {
         rule.pattern = QRegExp(pattern);
@@ -114,6 +137,31 @@ void Highlighter::highlightBlock(const QString &text)
                    setFormat(startIndex, commentLength, multiLineCommentFormat);
                    startIndex = commentStartExpression.indexIn(text, startIndex + commentLength);
                }
+
+           TextBlockData *data = new TextBlockData;
+
+           int leftPos = text.indexOf('{');
+           while (leftPos != -1) {
+               ParenthesisInfo *info = new ParenthesisInfo;
+               info->character = '{';
+               info->position = leftPos;
+
+               data->insert(info);
+               leftPos = text.indexOf('{', leftPos + 1);
+           }
+
+           int rightPos = text.indexOf('}');
+           while (rightPos != -1) {
+               ParenthesisInfo *info = new ParenthesisInfo;
+               info->character = '}';
+               info->position = rightPos;
+
+               data->insert(info);
+
+               rightPos = text.indexOf('}', rightPos +1);
+           }
+
+           setCurrentBlockUserData(data);
            }
 
 void Highlighter::setScheme(int x)

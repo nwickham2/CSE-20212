@@ -68,6 +68,7 @@ private slots:
     void selectStandardColorScheme(bool);
     void hideScratch(bool);
     void updateStatusBar();
+    void openTreeFile();
   //void updateStatusBar();
   //void openTree();
 
@@ -154,12 +155,12 @@ private:
 
     QLabel *curLine;
     QLabel curColumn;
-    //QDockWidget *files;
+    QDockWidget *files;
 
-    //QSplitter *splitter2;
+    QSplitter *splitter2;
 
-    //QFileSystemModel *model;
-    //QTreeView *tree;
+    QFileSystemModel *model;
+    QTreeView *tree;
 };
 
 #endif // MAINWINDOW_H

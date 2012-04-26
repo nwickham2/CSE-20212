@@ -26,7 +26,8 @@
 #include <QAbstractItemView>
 #include <QPalette>
 #include <QColor>
-
+#include <QtDebug>
+#include <QDir>
 
 using namespace std;
 
@@ -44,8 +45,20 @@ p.setColor(QPalette::Base, backcolor);
 QColor fontcolor(0, 0, 0);
 p.setColor(QPalette::Text, fontcolor);
 textarea->setPalette(p);
-
 is_highlighter = 0;
+
+
+
+splitter2 = new QSplitter;
+model = new QFileSystemModel;
+model->setRootPath(QDir::currentPath());
+tree = new QTreeView(splitter2);
+    tree->setModel(model);
+    tree->setRootIndex(model->index(QDir::currentPath()));
+         files = new QDockWidget(tr("Files"), this);
+         addDockWidget(Qt::LeftDockWidgetArea, files);
+         files->setWidget(splitter2);
+         tree->setSelectionMode(QTreeView::SingleSelection);
 
 createActions();
 createMenus();
@@ -130,16 +143,6 @@ else
 //createContextMenu();
 //createStatusBar();
 
-/*splitter2 = new QSplitter;
-
-model = new QFileSystemModel;
-model->setRootPath(QDir::currentPath());
-tree = new QTreeView(splitter);
-    tree->setModel(model);//QDir::currentPath());
-    tree->setRootIndex(model->index(QDir::currentPath()));
-         files = new QDockWidget(tr("Files"), this);
-         addDockWidget(Qt::LeftDockWidgetArea, files);
-         files->setWidget(splitter);*/
 }
 
 void MainWindow::updateStatusBar()
@@ -150,8 +153,6 @@ void MainWindow::updateStatusBar()
             .arg( textarea->textCursor().columnNumber()+1 );
 
         statusBar()->showMessage( msg );
-    //delete curLine;
-    //curLine->setText(msg);
 
 }
 
@@ -293,9 +294,23 @@ void MainWindow::createActions()
     //hideScratchAction->setChecked (true);
     hideScratchAction->setToolTip(tr("Hides the scratch areas, but keeps the data intact"));
     connect(hideScratchAction, SIGNAL(toggled(bool)), this, SLOT(hideScratch(bool)));
+  connect(tree, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(openTreeFile()));
 
-  //connect(tree, SIGNAL(clicked(QModelIndex)), this, SLOT(openTree()));
 }
+
+
+void MainWindow::openTreeFile()
+{
+    QModelIndexList selected = tree->selectionModel()->selectedIndexes();
+    QFileInfo fileInfo = model->fileInfo(selected[0]);
+    QString fileName = fileInfo.fileName();
+    if(okToContinue())
+    {
+    loadFile(fileName);
+    setCurrentFile(fileName);
+    }
+}
+
 
 void MainWindow::hideScratch(bool x)
 {
@@ -454,7 +469,7 @@ toolsToolBar = addToolBar(tr("&Tools"));
 toolsToolBar->addAction(cppSyntax);
 toolsToolBar->addAction(lineNumberAction);
 toolsToolBar->addAction(lineHighLightAction);
-
+addToolBarBreak(Qt::TopToolBarArea);
 optionsToolBar = addToolBar(tr("&Options"));
 optionsToolBar->addAction(lineWrapAction);
 optionsToolBar->addAction(hideScratchAction);
@@ -491,13 +506,20 @@ void MainWindow::syntaxHighlight(bool x)
     {
         syntax = 1;
         is_highlighter = 1;
+        connect(textarea, SIGNAL(cursorPositionChanged()),
+                textarea, SLOT(matchParentheses()));
         highlighter = new Highlighter(textarea->document(), MainWindow::currentScheme);
+textarea->matchParentheses();
+  //connect(this, SIGNAL(cursorPositionChanged()), highlighter, SLOT(rehighlightBlock));
     }
     else
     {
         syntax = 0;
         delete highlighter;
         is_highlighter = 0;
+        disconnect(textarea, SIGNAL(cursorPositionChanged()),
+                textarea, SLOT(matchParentheses()));
+          //connect(this, SIGNAL(cursorPositionChanged()), highlighter, SLOT(rehighlightBlock));
     }
 }
 
@@ -661,6 +683,11 @@ textarea->setPalette(p);
     color.setAlpha(255);
     p.setColor(QPalette::Text, color);
     textarea->setPalette(p);
+    QFileInfo info(file);
+    QString string = info.absolutePath();
+
+tree->setRootIndex(model->index(string));
+
     return true;
 }
 
@@ -815,12 +842,3 @@ if (MainWindow *mainWin = qobject_cast<MainWindow *>(win))
 mainWin->updateRecentFileActions();
 }
 }
-
-/*void MainWindow::openTree()
-{
-    cout << "Hello" << endl;
-    QModelIndex index = tree->currentIndex();
-     QString text = model->data(index, Qt::DisplayRole).toString();
-     loadFile(text);
-
-}*/

@@ -1,6 +1,7 @@
 #include <QtGui/QApplication>
 #include "mainwindow.h"
 #include <QFont>
+#include "highlighter.h"
 
 QStringList MainWindow::recentFiles;
     int MainWindow::currentScheme;
