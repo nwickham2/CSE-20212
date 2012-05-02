@@ -24,15 +24,20 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
 
     QSplashScreen *splash = new QSplashScreen;
-        splash->setPixmap(QPixmap("C:/Users/Nate/Desktop/Qtstuff/texteditor/Splash.png"));
+     splash->setPixmap(QPixmap("C:/Users/Nate/Desktop/Qtstuff/texteditor/Splash.png"));
+    //splash->setPixmap(QPixmap("C:/Users/Byron/CSE-20212/Images/Splash.png"));
         splash->show();
 
+      a.setWindowIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Icon.png"));
+       // a.setWindowIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Icon.png"));
         a.processEvents();
         sleep(3);
     QFont font("Lucida", 10, 0, false);
     MainWindow * mainWin = new MainWindow;
     a.setFont(font, "QPlainTextEdit");
     mainWin->show();
+
+    splash->finish(mainWin);
 
     return a.exec();
 }

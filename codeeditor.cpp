@@ -2,14 +2,25 @@
 #include <QPainter>
 #include <QTextBlock>
 #include <QFont>
+#include <QMenu>
+#include <QContextMenuEvent>
+#include <QTextCursor>
+#include <QTextDocumentFragment>
+#include <QCoreApplication>
+#include <QMessageBox>
 
 #include <QtGui>
 
 #include "highlighter.h"
 #include "codeeditor.h"
 #include "linenumberarea.h"
+#include "spellchecker.h"
 
-
+SpellChecker *spellChecker;
+QList<QAction *> suggestionWordsList;
+QAction *suggestedWord,
+        *addToDict;
+QString selectedWord;
 
 CodeEditor::CodeEditor(QWidget *parent) : QPlainTextEdit(parent)
 {
@@ -23,6 +34,22 @@ dolinelight = 0;
 
     updateLineNumberAreaWidth(0);
     highlightCurrentLine();
+
+    QString dictPath = "C:/Users/Nate/Desktop/hunspell/en_US";
+    QString userDict= "C:/Users/Nate/Desktop/hunspell/userDict.txt";
+    spellChecker = new SpellChecker(dictPath, userDict);
+
+    addToDict = new QAction(tr("Add to dictionary"),this);
+    connect(addToDict,SIGNAL(triggered()),this,SLOT(addToDictionary()));
+
+    for (int i = 0; i < suggestionWordsList.count(); ++i)
+    {
+        suggestionWordsList[i] = new QAction(this);
+        suggestionWordsList[i]->setVisible(false);
+        connect(suggestionWordsList[i], SIGNAL(triggered()),this, SLOT(replaceWord()));
+    }
+
+  //  MyTextHighlighter= new CTextSyntaxHighlighter(this->document());
 }
 
 CodeEditor::CodeEditor(const QString & text, QWidget *parent) : QPlainTextEdit(text, parent)
@@ -82,6 +109,75 @@ void CodeEditor::updateLineNumberAreaWidth(int /* newBlockCount */)
     setViewportMargins(lineNumberAreaWidth(), 0, 0, 0);
 }
 
+void CodeEditor::replaceWord()
+{
+    QAction *action = qobject_cast<QAction *>(sender());
+    if (action)
+        insertPlainText(action->text());
+}
+
+void CodeEditor::addToDictionary()
+{
+    spellChecker->addToUserWordlist(selectedWord);
+    insertPlainText(selectedWord);
+}
+
+void CodeEditor::updateTextSpeller()
+{
+    QTextCharFormat highlightFormat;
+    highlightFormat.setUnderlineColor(QColor("red"));
+    highlightFormat.setUnderlineStyle(QTextCharFormat::SpellCheckUnderline);
+
+    // save the position of the current cursor
+    QTextCursor oldCursor = textCursor();
+
+    // create a new cursor to walk through the text
+    QTextCursor cursor(document());
+
+    // Don't call cursor.beginEditBlock(), as this prevents the rewdraw after changes to the content
+    // cursor.beginEditBlock();
+    while(!cursor.atEnd()) {
+        cursor.movePosition(QTextCursor::EndOfWord, QTextCursor::KeepAnchor, 1);
+        QString word = cursor.selectedText();
+
+        // Workaround for better recognition of words
+        // punctuation etc. does not belong to words
+        while(!word.isEmpty() && !word.at(0).isLetter() && cursor.anchor() < cursor.position())
+        {
+            int cursorPos = cursor.position();
+            cursor.setPosition(cursor.anchor() + 1, QTextCursor::MoveAnchor);
+            cursor.setPosition(cursorPos, QTextCursor::KeepAnchor);
+            word = cursor.selectedText();
+        }
+
+        if(!word.isEmpty() && !spellChecker->spell(word))
+        {
+            QTextCursor tmpCursor(cursor);
+            tmpCursor.setPosition(cursor.anchor());
+            setTextCursor(tmpCursor);
+            ensureCursorVisible();
+
+            // highlight the unknown word
+            QTextEdit::ExtraSelection es;
+            es.cursor = cursor;
+            es.format = highlightFormat;
+
+            QList<QTextEdit::ExtraSelection> esList;
+            esList << es;
+            setExtraSelections(esList);
+
+            // reset the word highlight
+//            esList.clear();
+            setExtraSelections(esList);
+
+                    }
+        cursor.movePosition(QTextCursor::NextWord, QTextCursor::MoveAnchor, 1);
+    }
+    //cursor.endEditBlock();
+    setTextCursor(oldCursor);
+//    QMessageBox::warning(this,"wait","press OK!");
+}
+
 void CodeEditor::updateLineNumberArea(const QRect &rect, int dy)
 {
     if (dy)
@@ -99,6 +195,43 @@ void CodeEditor::resizeEvent(QResizeEvent *e)
 
     QRect cr = contentsRect();
     lineNumberArea->setGeometry(QRect(cr.left(), cr.top(), lineNumberAreaWidth(), cr.height()));
+}
+
+void CodeEditor::contextMenuEvent(QContextMenuEvent *event)
+{
+    selectedWord.clear();
+
+    QTextCursor cursor= textCursor();
+    cursor.setPosition(cursorForPosition(event->pos()).position());
+    cursor.select(QTextCursor::WordUnderCursor);
+    setTextCursor(cursor);
+
+    selectedWord=cursor.selection().toPlainText();
+
+
+    QMenu *editContextMenu = QPlainTextEdit::createStandardContextMenu();
+
+    editContextMenu->addSeparator();
+    QStringList suggestions = spellChecker->suggest(selectedWord);
+
+    suggestionWordsList.clear();
+
+    for(int i=0;i<suggestions.count();i++)
+    {
+        suggestedWord = new QAction(this);
+        suggestedWord->setText(suggestions.at(i));
+        connect(suggestedWord, SIGNAL(triggered()),this, SLOT(replaceWord()));
+        suggestionWordsList.append(suggestedWord);
+    }
+    editContextMenu->addActions(suggestionWordsList);
+
+    if(!cursor.selection().isEmpty())
+    {
+        editContextMenu->addSeparator();
+        editContextMenu->addAction(addToDict);
+    }
+
+    editContextMenu->exec(event->globalPos());
 }
 
 void CodeEditor::highlightCurrentLine()
@@ -271,4 +404,18 @@ void CodeEditor::createParenthesisSelection(int pos)
     setExtraSelections(selections);
 }
 
-
+void CodeEditor::deleteHighlighter(bool x)
+{
+    int y;
+    if(x == false)// && MyTextHighlighter)
+    {
+        delete MyTextHighlighter;
+        y = 0;
+    }
+    else if(x == true)// && !MyTextHighlighter)
+    {
+        MyTextHighlighter= new CTextSyntaxHighlighter(this->document());
+        y = 1;
+    }
+    qDebug() << y << endl;
+}

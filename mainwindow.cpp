@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "finddialog.h"
 #include <QPlainTextEdit>
 #include <QAction>
 #include <QMenu>
@@ -49,13 +50,16 @@ QColor backcolor(255, 255, 255);
 p.setColor(QPalette::Base, backcolor);
 QColor fontcolor(0, 0, 0);
 p.setColor(QPalette::Text, fontcolor);
+p.setColor(QPalette::Highlight, Qt::red);
 textarea->setPalette(p);
 is_highlighter = 0;
-
+currentPath = new QLabel(whereWeAre->absolutePath());
 widget = new QWidget;
 splitter2 = new QSplitter;
 model = new QFileSystemModel;
 model->setRootPath(QDir::currentPath());
+commands = new QStringList;
+lastCommand = 0;
 QStringList filters ;
 filters << "*.txt" << "*.cpp" << "*.h" << "*.java" << "*.c" << "Makefile";
 model->setNameFilters(filters);
@@ -68,13 +72,17 @@ tree = new QListView(splitter2);
          //splitter->addWidget(downLocation);
         // splitter->addWidget(goButton);
                   downLocationDock = new QDockWidget(tr("Enter Directory"), this);
-                  fileLayout = new QVBoxLayout;
-                  fileLayout->addWidget(downLocation);
+                 // fileLayout = new QVBoxLayout;
+                 // fileLayout->addWidget(downLocation);
+                 // fileLayout->addWidget(currentPath);
                   //fileLayout->addWidget(goButton);
-                  fileLayout->setContentsMargins(1, 1, 1, 1);
-                  widget->setLayout(fileLayout);
-                  downLocationDock->setWidget(widget);
+                 // fileLayout->setContentsMargins(1, 1, 1, 1);
+                 // widget->setLayout(fileLayout);
+                  downLocationDock->setWidget(downLocation);
+                  goButtonDock = new QDockWidget(tr("Current Directory"), this);
+                  goButtonDock->setWidget(currentPath);
                   addDockWidget(Qt::LeftDockWidgetArea, downLocationDock);
+                  addDockWidget(Qt::LeftDockWidgetArea, goButtonDock);
          addDockWidget(Qt::LeftDockWidgetArea, files);
          tree->setSelectionMode(QListView::SingleSelection);
         // tree->hideColumn(1);
@@ -153,7 +161,10 @@ tabifyDockWidget(dock1, dock2);
 files->setFeatures(QDockWidget::NoDockWidgetFeatures);
 files->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
 downLocationDock->setFeatures(QDockWidget::NoDockWidgetFeatures);
-downLocationDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
+downLocationDock->setFeatures(QDockWidget::NoDockWidgetFeatures);
+//downLocationDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
+goButtonDock->setFeatures(QDockWidget::NoDockWidgetFeatures);
+//downLocationDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
 /*
 if(hidescratch)
 {
@@ -168,6 +179,13 @@ else
 }
 
 */
+
+
+dialog = new FindDialog(this);
+
+connect(dialog, SIGNAL(findPrevious(QString, Qt::CaseSensitivity)), this, SLOT(idontknow(QString, Qt::CaseSensitivity)));
+connect(dialog, SIGNAL(findNext(QString, Qt::CaseSensitivity)), this, SLOT(idontknow2(QString, Qt::CaseSensitivity)));
+connect(dialog, SIGNAL(replace(QString)), this, SLOT(idontknow3(QString)));
 
 }
 
@@ -241,6 +259,12 @@ void MainWindow::createActions()
     selectAllAction->setStatusTip(tr("Select the entire document"));
     connect(selectAllAction, SIGNAL(triggered()), textarea, SLOT(selectAll()));
 
+    findAction = new QAction(tr("Find"), this);
+    findAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Replace.png"));
+    findAction->setShortcut(tr("Ctrl+F"));
+    findAction->setStatusTip(tr("Search for specific text in the document"));
+    connect(findAction, SIGNAL(triggered()), this, SLOT(find()));
+
     cutAction = new QAction(tr("Cut"), this);
     cutAction->setShortcut(tr("Ctrl+X"));
     cutAction->setStatusTip(tr("Delete the selected text and add it to the clipboard"));
@@ -281,7 +305,7 @@ void MainWindow::createActions()
     connect(aboutQtAction, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
 
     aboutAction = new QAction(tr("About"), this);
-    aboutAction->setStatusTip(tr("Show NotePad2's about box"));
+    aboutAction->setStatusTip(tr("Show NotePadND's about box"));
     connect(aboutAction, SIGNAL(triggered()), this, SLOT(about()));
 
     lineNumberAction = new QAction(tr("&Line Numbers"), this);
@@ -337,11 +361,9 @@ void MainWindow::createActions()
     gotoLineEdit->setShortcut(tr("Ctrl+D"));
     connect(gotoLineEdit, SIGNAL(triggered()), this , SLOT(giveEditFocus()));
 
-    findAction = new QAction(tr("Find text"), this);
-    findAction->setShortcut(tr("Ctrl+F"));
-
-    replaceAction = new QAction(tr("Replace found text"), this);
-
+    grammarHighlightAction = new QAction(tr("Highlight grammar errors"), this);
+    grammarHighlightAction->setCheckable(true);
+    connect(grammarHighlightAction, SIGNAL(toggled(bool)), this , SLOT(grammarHighlight(bool)));
 
 
     newAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/New.png"));
@@ -352,8 +374,7 @@ void MainWindow::createActions()
     printAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Print.png"));
     exitAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Exit.png"));
     selectAllAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Select.png"));
-    findAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Find.png"));
-    replaceAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Replace.png"));
+    findAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Replace.png"));
     cutAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Cut.png"));
     copyAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Copy.png"));
     pasteAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Paste.png"));
@@ -364,6 +385,27 @@ void MainWindow::createActions()
     aboutQtAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/QtAbout.png"));
     aboutAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/About.png"));
     lineNumberAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/LineNumbers.png"));
+
+
+   /* newAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/New.png"));
+    openAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Open.png"));
+    saveAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Save.png"));
+    saveAsAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/SaveAs.png"));
+    closeAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Close.png"));
+    printAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Print.png"));
+    exitAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Exit.png"));
+    selectAllAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Select.png"));
+    findAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Replace.png"));
+    cutAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Cut.png"));
+    copyAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Copy.png"));
+    pasteAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Paste.png"));
+    deleteAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Delete.png"));
+    undoAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Undo.png"));
+    redoAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Redo.png"));
+    cppSyntax->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Highlight.png"));
+    aboutQtAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/QtAbout.png"));
+    aboutAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/About.png"));
+    lineNumberAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/LineNumbers.png"));*/
 }
 
 void MainWindow::giveEditFocus()
@@ -385,9 +427,54 @@ downLocation->setFocus();
 
 void MainWindow::gotoDirect()
 {
+
+    bool result;
     QString desired;
     QString entered = downLocation->text();
-    if(entered[0] == '/')
+    commands->push_back(entered);
+    lastCommand = commands->size() - 1;
+     QStringList list = entered.split(" ");
+     if(list[0] == "cd")
+         entered = list[1];
+     if(list[0] == "mkdir")
+    {
+        if(list[0] == "mkdir" && list.size() == 2)
+            result = whereWeAre->mkdir(list[1]);
+        if(result)
+            qDebug() << "yes"  << endl;
+        else
+            qDebug() << "No"  << endl;
+                downLocation->clear();
+        return;
+
+    }
+     else if(list[0] == "rmdir")
+     {
+         if(list.size() == 2)
+         {
+             int r = QMessageBox::warning(this, tr("QTextEdit"), tr("Are you sure you want to delete the directory ") + list[1] + tr(" and all its contents?"), QMessageBox::Yes | QMessageBox::Default, QMessageBox::No, QMessageBox::Cancel | QMessageBox::Escape);
+             if (r == QMessageBox::Yes)
+             {
+                 whereWeAre->rmdir(list[1]);
+             }
+             else if (r == QMessageBox::Cancel)
+             {
+
+             }
+
+             downLocation->clear();
+     return;
+         }
+     }
+    if(entered == "C:" || entered == "~")
+    {
+        desired = "C:";
+    }
+    else if(entered[0] == 'C' && entered[1] == ':')
+    {
+desired = entered;
+    }
+    else if(entered[0] == '/')
        desired = whereWeAre->absolutePath() + entered;
      else
     desired = whereWeAre->absolutePath() + '/' + entered;
@@ -397,27 +484,30 @@ void MainWindow::gotoDirect()
     {
     tree->setRootIndex(useIndex);
     //tree->collapseAll();
+    qDebug() << "is readable" << endl;
     whereWeAre->cd(desired);
+    currentPath->setText(whereWeAre->absolutePath());
     }
         downLocation->clear();
 }
 
 void MainWindow::treeUp()
 {
-    QFile file(curFile);
+   /* QFile file(curFile);
     QFileInfo info(file);
     QString string = info.absolutePath();
 qDebug() << string << endl;
 QModelIndex currentIndex = model->index(string);
 QFileInfo info3 = model->fileInfo(currentIndex);
 QString string3 = info3.absoluteFilePath();
-qDebug() << string3 << endl;
+qDebug() << string3 << endl;*/
 //QModelIndex highIndex = tree->indexAbove(currentIndex);
 //QFileInfo info2 = model->fileInfo(highIndex);
 //QString string2 = info2.absolutePath();
 //qDebug() << string2 << endl;
 
     whereWeAre->cdUp();
+        currentPath->setText(whereWeAre->absolutePath());
     QModelIndex useIndex = model->index(whereWeAre->absolutePath());
     tree->setRootIndex(useIndex);
   //  tree->collapseAll();
@@ -446,7 +536,9 @@ void MainWindow::openTreeFile()
         model->setRootPath(model->filePath(selected[0]));
         tree->setRootIndex(selected[0]);
     }
+        currentPath->setText(whereWeAre->absolutePath());
 }
+
 
 
 void MainWindow::hideScratch(bool x)
@@ -562,6 +654,7 @@ void MainWindow::createMenus()
     fileMenu -> addAction(exitAction);
 
     editMenu = menuBar() -> addMenu(tr("&Edit"));
+    editMenu->addAction(findAction);
     editMenu->addAction(undoAction);
     editMenu->addAction(redoAction);
     editMenu -> addSeparator();
@@ -569,12 +662,14 @@ void MainWindow::createMenus()
     editMenu->addAction(copyAction);
     editMenu->addAction(pasteAction);
     editMenu->addAction(deleteAction);
-    editMenu->addAction(findAction);
-    editMenu->addAction(replaceAction);
     selectSubMenu = editMenu->addMenu(tr("&Select"));
     selectSubMenu->addAction(selectAllAction);
     editMenu->addSeparator();
 
+    toolOptions = new QActionGroup(this);
+toolOptions->addAction(cppSyntax);
+toolOptions->addAction(lineHighLightAction);
+toolOptions->addAction(grammarHighlightAction);
     toolsMenu = menuBar()->addMenu(tr("&Tools"));
     toolsMenu->addAction(cppSyntax);
     toolsMenu->addAction(lineNumberAction);
@@ -585,13 +680,13 @@ void MainWindow::createMenus()
     optionsMenu->addAction(hideScratchAction);
     optionsMenu->addAction(hideFileTree);
     optionsMenu->addAction(treeUpAction);
+    toolsMenu->addAction(grammarHighlightAction);
     colorSchemeSubMenu = optionsMenu->addMenu(tr("Color Scheme..."));
 
     Schemes = new QActionGroup(this);
     Schemes->addAction(darkSchemeAction);
     Schemes->addAction(blueSchemeAction);
     Schemes->addAction(standardSchemeAction);
-
 
     colorSchemeSubMenu->addAction(darkSchemeAction);
     colorSchemeSubMenu->addAction(blueSchemeAction);
@@ -620,7 +715,6 @@ editToolBar->addSeparator();
 editToolBar->addAction(undoAction);
 editToolBar->addAction(redoAction);
 editToolBar->addAction(findAction);
-editToolBar->addAction(replaceAction);
 
 toolsToolBar = addToolBar(tr("&Tools"));
 toolsToolBar->addAction(cppSyntax);
@@ -632,6 +726,7 @@ optionsToolBar->addAction(lineWrapAction);
 optionsToolBar->addAction(hideScratchAction);
 optionsToolBar->addAction(hideFileTree);
 optionsToolBar->addAction(gotoLineEdit);
+optionsToolBar->addAction(grammarHighlightAction);
 //editToolBar->addAction(findAction);
 //editToolBar->addAction(goToCellAction);
 }
@@ -651,6 +746,105 @@ void MainWindow::printf()
              return;
 
          document->print(&printer);
+}
+
+void MainWindow::find()
+{
+    if (dialog->isHidden())
+        dialog->show();
+    else
+        dialog->activateWindow();
+}
+
+void MainWindow::grammarHighlight(bool x)
+{
+    if(x == true && !is_highlighter)
+textarea->deleteHighlighter(x);
+    if(x == false)
+        textarea->deleteHighlighter(x);
+
+}
+
+void MainWindow::idontknow2(QString text, Qt::CaseSensitivity cs)
+{
+    if (!text.isEmpty())
+    {
+        if (!(textarea->textCursor().atStart()))
+            textarea->moveCursor(QTextCursor::NextWord);
+
+        textarea->moveCursor(QTextCursor::StartOfWord);
+
+        bool sens;
+        if(cs == Qt::CaseSensitive)
+            sens = textarea->find(text, QTextDocument::FindWholeWords | QTextDocument::FindCaseSensitively);
+        else
+            sens = textarea->find(text, QTextDocument::FindWholeWords);
+
+        if (sens)
+        {
+            QTextCursor cursor = textarea->textCursor();
+            cursor.select(QTextCursor::WordUnderCursor);
+        }
+        else if (textarea->textCursor().atStart())
+        {
+            QMessageBox notFound;
+            notFound.setText("Keyword not found.");
+            notFound.exec();
+        }
+        else
+        {
+            textarea->moveCursor(QTextCursor::Start);
+        }
+    }
+}
+
+void MainWindow::idontknow(QString text, Qt::CaseSensitivity cs)
+{
+    if (!text.isEmpty())
+    {
+        if (!(textarea->textCursor().atEnd()))
+            textarea->moveCursor(QTextCursor::PreviousWord);
+
+        bool sens;
+        if(cs == Qt::CaseSensitive)
+            sens = textarea->find(text, QTextDocument::FindWholeWords | QTextDocument::FindBackward | QTextDocument::FindCaseSensitively);
+        else
+            sens = textarea->find(text, QTextDocument::FindWholeWords | QTextDocument::FindBackward);
+
+        if (sens)
+        {
+            QTextCursor cursor = textarea->textCursor();
+            cursor.select(QTextCursor::WordUnderCursor);
+        }
+        else if (textarea->textCursor().atEnd())
+        {
+            QMessageBox notFound;
+            notFound.setText("Keyword not found.");
+            notFound.exec();
+        }
+        else
+        {
+            textarea->moveCursor(QTextCursor::End);
+        }
+    }
+}
+
+void MainWindow::idontknow3(QString text)
+{
+    if (!text.isEmpty())
+    {
+        if (textarea->textCursor().hasSelection())
+        {
+            textarea->textCursor().removeSelectedText();
+            textarea->textCursor().insertText(text);
+        }
+        else
+        {
+            QMessageBox notFound;
+            notFound.setText("No text selected.");
+            notFound.exec();
+        }
+    }
 }
 
 void MainWindow::deletef()
@@ -844,6 +1038,7 @@ textarea->setPalette(p);
     QString string = info.absolutePath();
 whereWeAre->cd(string);
 tree->setRootIndex(model->index(string));
+    currentPath->setText(whereWeAre->absolutePath());
 
     return true;
 }
@@ -899,7 +1094,7 @@ mainWin->updateRecentFileActions();
 }
 }
 setWindowTitle(tr("%1[*] - %2").arg(shownName)
-.arg(tr("NotePad2")));
+.arg(tr("NotepadND")));
 }
 
 QString MainWindow::strippedName(const QString &fullFileName)
@@ -954,10 +1149,10 @@ loadFile(action->data().toString());
 
 void MainWindow::about()
 {
-QMessageBox::about(this, tr("About NotePad2"),
-tr("NotePad2 1.1"
-"Not yet copyrighted"
-"NotePad2 is a small text editing application that "
+QMessageBox::about(this, tr("About NotePadND"),
+tr("NotePadND\n"
+"Not yet copyrighted\n"
+"NotePadND is a small text editing application that "
 "created to fulfill the project requirement for "
 "a Fundementals of Computing class at the "
 "University of Notre Dame."));
@@ -965,7 +1160,7 @@ tr("NotePad2 1.1"
 
 void MainWindow::writeSettings()
 {
-QSettings settings("FundComp", "NotePad2");
+QSettings settings("FundComp", "NotePadND");
 settings.setValue("geometry", geometry());
 settings.setValue("recentFiles", MainWindow::recentFiles);
 settings.setValue("currentScheme", MainWindow::currentScheme);
@@ -979,7 +1174,7 @@ settings.setValue("currentScheme", MainWindow::currentScheme);
 
 void MainWindow::readSettings()
 {
-QSettings settings("FundComp", "NotePad2");
+QSettings settings("FundComp", "NotePadND");
 QRect rect = settings.value("geometry",
 QRect(200, 200, 400, 400)).toRect();
 move(rect.topLeft());
@@ -1000,52 +1195,33 @@ mainWin->updateRecentFileActions();
 }
 }
 
-void MainWindow::find()
-{
-    bool ok;
-    QString input = QInputDialog::getText(this, tr("Find and Replace"), tr("Keyword:"), QLineEdit::Normal, "Search", &ok);
-    if (!input.isEmpty())
-    {
-        textarea->moveCursor(QTextCursor::Right);
-        textarea->moveCursor(QTextCursor::StartOfWord);
-        if (textarea->find(input))
+void MainWindow::keyPressEvent(QKeyEvent *p)
+{int in = p->key();
+    int x = lastCommand;
+    if( in == Qt::Key_Up && downLocation->hasFocus())
+    {if(!commands->isEmpty())
         {
-            QTextCursor cursor = textarea->textCursor();
-            cursor.select(QTextCursor::WordUnderCursor);
-        }
+            qDebug() << "entered" << endl;
+           // lastCommandS = new QString(commands[x]);
+            downLocation->setText(commands->at(x));
+            qDebug() << "entered2" << endl;
+        if(x == 0)
+            lastCommand = commands->size() - 1;
         else
-        {
-            QMessageBox notFound;
-            notFound.setText("Keyword not found.");
-            notFound.exec();
+            lastCommand--;
         }
     }
-}
-
-void MainWindow::replace()
-{
-    bool ok;
-    QString input1 = QInputDialog::getText(this, tr("Find and Replace"), tr("Keyword:"), QLineEdit::Normal, "Search", &ok);
-    if (!input1.isEmpty())
-    {
-        textarea->moveCursor(QTextCursor::Right);
-        textarea->moveCursor(QTextCursor::StartOfWord);
-        if (textarea->find(input1))
+    if( in == Qt::Key_Down && downLocation->hasFocus())
+    {if(!commands->isEmpty())
         {
-            QTextCursor cursor = textarea->textCursor();
-            cursor.select(QTextCursor::WordUnderCursor);
-            QString input2 = QInputDialog::getText(this, tr("Find and Replace"), tr("Replace With:"), QLineEdit::Normal, "New Word", &ok);
-            if (!input2.isEmpty())
-            {
-                deletef();
-                textarea->insertPlainText(input2);
-            }
-        }
+            qDebug() << "entered" << endl;
+           // lastCommandS = new QString(commands[x]);
+            downLocation->setText(commands->at(x));
+            qDebug() << "entered2" << endl;
+        if(lastCommand == commands->size() - 1)
+        {}
         else
-        {
-            QMessageBox notFound;
-            notFound.setText("Keyword not found.");
-            notFound.exec();
+            lastCommand++;
         }
     }
 }

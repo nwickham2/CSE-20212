@@ -28,6 +28,7 @@
 #include "highlighter.h"
 #include "linenumberarea.h"
 #include "codeeditor.h"
+#include "finddialog.h"
 
 
 class MainWindow : public QMainWindow
@@ -46,8 +47,12 @@ public:
 
 protected:
     void closeEvent(QCloseEvent *); //what happens when the window is closed?
+    void keyPressEvent(QKeyEvent *);
 
 private slots:
+    void idontknow(QString, Qt::CaseSensitivity);
+    void idontknow2(QString, Qt::CaseSensitivity);
+    void idontknow3(QString);
     void changeWindowModification();
 
     void newFile();
@@ -77,7 +82,7 @@ private slots:
     void gotoDirect();
     void giveEditFocus();
     void find();
-    void replace();
+    void grammarHighlight(bool);
 
 private:
     enum { MaxRecentFiles = 5};
@@ -113,6 +118,8 @@ private:
     QPlainTextEdit *scratcharea2;
 
     CodeEditor *textarea;
+    QActionGroup * toolOptions;
+
 
     QToolBar *fileToolBar;
     QToolBar *editToolBar;
@@ -157,7 +164,7 @@ private:
     QAction *treeUpAction;
     QAction *gotoLineEdit;
     QAction *findAction;
-    QAction *replaceAction;
+    QAction *grammarHighlightAction;
 
     QDockWidget *dock1;
     QDockWidget *dock2;
@@ -184,6 +191,14 @@ private:
     QPushButton *goButton;
 
     QVBoxLayout *fileLayout;
+    FindDialog *dialog;
+    QLabel *currentPath;
+
+    QStringList *commands;
+
+    int lastCommand;
+
+    QString *lastCommandS;
 };
 
 #endif // MAINWINDOW_H
