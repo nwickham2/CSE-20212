@@ -3,6 +3,7 @@
 #include <QTextBlockUserData>
 #include <QColor>
 
+
 TextBlockData::TextBlockData()
 {
     // Nothing to do
@@ -36,7 +37,6 @@ Highlighter::Highlighter(QTextDocument *parent, int x)
     highlightingRules.append(rule);
 
     quotationFormat.setForeground(quotationColor);
-    //quotationFormat.setFontWeight(QFont::Bold);
     QStringList quotationPatterns;
     quotationPatterns << "\'.*\'" << "\".*\"" << "<[A-Za-z0-9]+>";
     foreach(const QString &pattern, quotationPatterns)
@@ -166,6 +166,7 @@ void Highlighter::highlightBlock(const QString &text)
 
 void Highlighter::setScheme(int x)
 {
+
     if(x == 1)
     {
         preprocessorColor.setRgb(191, 62, 255);

@@ -28,12 +28,17 @@
 #include <QColor>
 #include <QtDebug>
 #include <QDir>
+#include <QIcon>
+#include <QInputDialog>
 
 using namespace std;
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
+    goButton = new QPushButton(tr("Go"));
+    downLocation = new QLineEdit;
+    whereWeAre = new QDir(QDir::current());
     MainWindow::currentScheme = 3;
 textarea = new CodeEditor;
 setCentralWidget(textarea);
@@ -47,18 +52,38 @@ p.setColor(QPalette::Text, fontcolor);
 textarea->setPalette(p);
 is_highlighter = 0;
 
-
-
+widget = new QWidget;
 splitter2 = new QSplitter;
 model = new QFileSystemModel;
 model->setRootPath(QDir::currentPath());
-tree = new QTreeView(splitter2);
+QStringList filters ;
+filters << "*.txt" << "*.cpp" << "*.h" << "*.java" << "*.c" << "Makefile";
+model->setNameFilters(filters);
+model->setNameFilterDisables(false);
+tree = new QListView(splitter2);
     tree->setModel(model);
     tree->setRootIndex(model->index(QDir::currentPath()));
          files = new QDockWidget(tr("Files"), this);
+         files->setWidget(tree);
+         //splitter->addWidget(downLocation);
+        // splitter->addWidget(goButton);
+                  downLocationDock = new QDockWidget(tr("Enter Directory"), this);
+                  fileLayout = new QVBoxLayout;
+                  fileLayout->addWidget(downLocation);
+                  //fileLayout->addWidget(goButton);
+                  fileLayout->setContentsMargins(1, 1, 1, 1);
+                  widget->setLayout(fileLayout);
+                  downLocationDock->setWidget(widget);
+                  addDockWidget(Qt::LeftDockWidgetArea, downLocationDock);
          addDockWidget(Qt::LeftDockWidgetArea, files);
-         files->setWidget(splitter2);
-         tree->setSelectionMode(QTreeView::SingleSelection);
+         tree->setSelectionMode(QListView::SingleSelection);
+        // tree->hideColumn(1);
+        // tree->hideColumn(2);
+
+        // tree->hideColumn(3);
+
+
+
 
 createActions();
 createMenus();
@@ -107,7 +132,6 @@ if(lineNumbers)
                         .arg( textarea->textCursor().blockNumber() +1 )
                         .arg( textarea->textCursor().columnNumber()+1 );
 
-                    //statusBar()->showMessage( msg );
                 curLine = new QLabel(msg);
                 statusBar()->addWidget(curLine);
 
@@ -126,6 +150,10 @@ dock2->setFeatures(QDockWidget::NoDockWidgetFeatures);
 dock1->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
 dock2->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
 tabifyDockWidget(dock1, dock2);
+files->setFeatures(QDockWidget::NoDockWidgetFeatures);
+files->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
+downLocationDock->setFeatures(QDockWidget::NoDockWidgetFeatures);
+downLocationDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
 /*
 if(hidescratch)
 {
@@ -140,8 +168,6 @@ else
 }
 
 */
-//createContextMenu();
-//createStatusBar();
 
 }
 
@@ -294,7 +320,107 @@ void MainWindow::createActions()
     //hideScratchAction->setChecked (true);
     hideScratchAction->setToolTip(tr("Hides the scratch areas, but keeps the data intact"));
     connect(hideScratchAction, SIGNAL(toggled(bool)), this, SLOT(hideScratch(bool)));
-  connect(tree, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(openTreeFile()));
+
+    hideFileTree = new QAction(tr("Hide file tree"), this);
+    hideFileTree->setCheckable(true);
+    hideFileTree->setToolTip(tr("Hides the file tree"));
+    connect(hideFileTree, SIGNAL(toggled(bool)), this, SLOT(hidetree(bool)));
+
+    treeUpAction = new QAction(tr("Cd up"), this);
+    treeUpAction->setShortcut(tr("Ctrl+U"));
+    connect(treeUpAction, SIGNAL(triggered()), this, SLOT(treeUp()));
+
+    connect(tree, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(openTreeFile()));
+    connect(downLocation, SIGNAL(returnPressed()), this, SLOT(gotoDirect()));
+
+    gotoLineEdit = new QAction(tr("Set cursor in line edit"), this);
+    gotoLineEdit->setShortcut(tr("Ctrl+D"));
+    connect(gotoLineEdit, SIGNAL(triggered()), this , SLOT(giveEditFocus()));
+
+    findAction = new QAction(tr("Find text"), this);
+    findAction->setShortcut(tr("Ctrl+F"));
+
+    replaceAction = new QAction(tr("Replace found text"), this);
+
+
+
+    newAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/New.png"));
+    openAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Open.png"));
+    saveAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Save.png"));
+    saveAsAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/SaveAs.png"));
+    closeAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Close.png"));
+    printAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Print.png"));
+    exitAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Exit.png"));
+    selectAllAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Select.png"));
+    findAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Find.png"));
+    replaceAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Replace.png"));
+    cutAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Cut.png"));
+    copyAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Copy.png"));
+    pasteAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Paste.png"));
+    deleteAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Delete.png"));
+    undoAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Undo.png"));
+    redoAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Redo.png"));
+    cppSyntax->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Highlight.png"));
+    aboutQtAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/QtAbout.png"));
+    aboutAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/About.png"));
+    lineNumberAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/LineNumbers.png"));
+}
+
+void MainWindow::giveEditFocus()
+{
+    qDebug() << "check" << endl;
+    if(textarea->hasFocus())
+    {
+    textarea->clearFocus();
+    downLocation->activateWindow();
+downLocation->setFocus();
+    }
+    else
+    {
+        downLocation->clearFocus();
+        textarea->activateWindow();
+        textarea->setFocus();
+    }
+}
+
+void MainWindow::gotoDirect()
+{
+    QString desired;
+    QString entered = downLocation->text();
+    if(entered[0] == '/')
+       desired = whereWeAre->absolutePath() + entered;
+     else
+    desired = whereWeAre->absolutePath() + '/' + entered;
+    QModelIndex useIndex = model->index(desired);
+    QDir desiredDir(desired);
+    if(desiredDir.isReadable() == true)
+    {
+    tree->setRootIndex(useIndex);
+    //tree->collapseAll();
+    whereWeAre->cd(desired);
+    }
+        downLocation->clear();
+}
+
+void MainWindow::treeUp()
+{
+    QFile file(curFile);
+    QFileInfo info(file);
+    QString string = info.absolutePath();
+qDebug() << string << endl;
+QModelIndex currentIndex = model->index(string);
+QFileInfo info3 = model->fileInfo(currentIndex);
+QString string3 = info3.absoluteFilePath();
+qDebug() << string3 << endl;
+//QModelIndex highIndex = tree->indexAbove(currentIndex);
+//QFileInfo info2 = model->fileInfo(highIndex);
+//QString string2 = info2.absolutePath();
+//qDebug() << string2 << endl;
+
+    whereWeAre->cdUp();
+    QModelIndex useIndex = model->index(whereWeAre->absolutePath());
+    tree->setRootIndex(useIndex);
+  //  tree->collapseAll();
 
 }
 
@@ -303,11 +429,22 @@ void MainWindow::openTreeFile()
 {
     QModelIndexList selected = tree->selectionModel()->selectedIndexes();
     QFileInfo fileInfo = model->fileInfo(selected[0]);
-    QString fileName = fileInfo.fileName();
-    if(okToContinue())
+    QString fileName = fileInfo.absoluteFilePath();
+    QString type = model->type(selected[0]);
+    qDebug() << type << endl;
+    if(okToContinue() && model->type(selected[0]) != "File Folder")
     {
+        whereWeAre->cd(model->filePath(selected[0]));
+        model->setRootPath(model->filePath(selected[0]));
+        tree->setRootIndex(selected[0]);
     loadFile(fileName);
     setCurrentFile(fileName);
+    }
+    if(model->type(selected[0]) == "File Folder")
+    {
+        whereWeAre->cd(model->filePath(selected[0]));
+        model->setRootPath(model->filePath(selected[0]));
+        tree->setRootIndex(selected[0]);
     }
 }
 
@@ -325,6 +462,20 @@ hidescratch = 1;
         restoreDockWidget(dock1);
     restoreDockWidget(dock2);
     hidescratch = 0;
+    }
+}
+
+void MainWindow::hidetree(bool x)
+{
+    if(x == true)
+    {
+       removeDockWidget(files);
+       removeDockWidget(downLocationDock);
+    }
+    else if(x == false)
+    {
+        restoreDockWidget(downLocationDock);
+        restoreDockWidget(files);
     }
 }
 
@@ -418,6 +569,8 @@ void MainWindow::createMenus()
     editMenu->addAction(copyAction);
     editMenu->addAction(pasteAction);
     editMenu->addAction(deleteAction);
+    editMenu->addAction(findAction);
+    editMenu->addAction(replaceAction);
     selectSubMenu = editMenu->addMenu(tr("&Select"));
     selectSubMenu->addAction(selectAllAction);
     editMenu->addSeparator();
@@ -430,6 +583,8 @@ void MainWindow::createMenus()
     optionsMenu = menuBar()->addMenu(tr("&Options"));
     optionsMenu->addAction(lineWrapAction);
     optionsMenu->addAction(hideScratchAction);
+    optionsMenu->addAction(hideFileTree);
+    optionsMenu->addAction(treeUpAction);
     colorSchemeSubMenu = optionsMenu->addMenu(tr("Color Scheme..."));
 
     Schemes = new QActionGroup(this);
@@ -464,6 +619,8 @@ editToolBar->addAction(pasteAction);
 editToolBar->addSeparator();
 editToolBar->addAction(undoAction);
 editToolBar->addAction(redoAction);
+editToolBar->addAction(findAction);
+editToolBar->addAction(replaceAction);
 
 toolsToolBar = addToolBar(tr("&Tools"));
 toolsToolBar->addAction(cppSyntax);
@@ -473,6 +630,8 @@ addToolBarBreak(Qt::TopToolBarArea);
 optionsToolBar = addToolBar(tr("&Options"));
 optionsToolBar->addAction(lineWrapAction);
 optionsToolBar->addAction(hideScratchAction);
+optionsToolBar->addAction(hideFileTree);
+optionsToolBar->addAction(gotoLineEdit);
 //editToolBar->addAction(findAction);
 //editToolBar->addAction(goToCellAction);
 }
@@ -510,7 +669,6 @@ void MainWindow::syntaxHighlight(bool x)
                 textarea, SLOT(matchParentheses()));
         highlighter = new Highlighter(textarea->document(), MainWindow::currentScheme);
 textarea->matchParentheses();
-  //connect(this, SIGNAL(cursorPositionChanged()), highlighter, SLOT(rehighlightBlock));
     }
     else
     {
@@ -519,7 +677,6 @@ textarea->matchParentheses();
         is_highlighter = 0;
         disconnect(textarea, SIGNAL(cursorPositionChanged()),
                 textarea, SLOT(matchParentheses()));
-          //connect(this, SIGNAL(cursorPositionChanged()), highlighter, SLOT(rehighlightBlock));
     }
 }
 
@@ -685,7 +842,7 @@ textarea->setPalette(p);
     textarea->setPalette(p);
     QFileInfo info(file);
     QString string = info.absolutePath();
-
+whereWeAre->cd(string);
 tree->setRootIndex(model->index(string));
 
     return true;
@@ -841,4 +998,54 @@ foreach (QWidget *win, QApplication::topLevelWidgets())
 if (MainWindow *mainWin = qobject_cast<MainWindow *>(win))
 mainWin->updateRecentFileActions();
 }
+}
+
+void MainWindow::find()
+{
+    bool ok;
+    QString input = QInputDialog::getText(this, tr("Find and Replace"), tr("Keyword:"), QLineEdit::Normal, "Search", &ok);
+    if (!input.isEmpty())
+    {
+        textarea->moveCursor(QTextCursor::Right);
+        textarea->moveCursor(QTextCursor::StartOfWord);
+        if (textarea->find(input))
+        {
+            QTextCursor cursor = textarea->textCursor();
+            cursor.select(QTextCursor::WordUnderCursor);
+        }
+        else
+        {
+            QMessageBox notFound;
+            notFound.setText("Keyword not found.");
+            notFound.exec();
+        }
+    }
+}
+
+void MainWindow::replace()
+{
+    bool ok;
+    QString input1 = QInputDialog::getText(this, tr("Find and Replace"), tr("Keyword:"), QLineEdit::Normal, "Search", &ok);
+    if (!input1.isEmpty())
+    {
+        textarea->moveCursor(QTextCursor::Right);
+        textarea->moveCursor(QTextCursor::StartOfWord);
+        if (textarea->find(input1))
+        {
+            QTextCursor cursor = textarea->textCursor();
+            cursor.select(QTextCursor::WordUnderCursor);
+            QString input2 = QInputDialog::getText(this, tr("Find and Replace"), tr("Replace With:"), QLineEdit::Normal, "New Word", &ok);
+            if (!input2.isEmpty())
+            {
+                deletef();
+                textarea->insertPlainText(input2);
+            }
+        }
+        else
+        {
+            QMessageBox notFound;
+            notFound.setText("Keyword not found.");
+            notFound.exec();
+        }
+    }
 }

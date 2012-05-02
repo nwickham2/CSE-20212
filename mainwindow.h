@@ -20,11 +20,14 @@
 #include <QTreeWidget>
 #include <QActionGroup>
 #include <QLabel>
+#include <QDir>
+#include <QLineEdit>
+#include <QPushButton>
+#include <QListView>
 
 #include "highlighter.h"
 #include "linenumberarea.h"
 #include "codeeditor.h"
-
 
 
 class MainWindow : public QMainWindow
@@ -69,8 +72,12 @@ private slots:
     void hideScratch(bool);
     void updateStatusBar();
     void openTreeFile();
-  //void updateStatusBar();
-  //void openTree();
+    void hidetree(bool);
+    void treeUp();
+    void gotoDirect();
+    void giveEditFocus();
+    void find();
+    void replace();
 
 private:
     enum { MaxRecentFiles = 5};
@@ -87,8 +94,6 @@ private:
     void createActions();
     void createMenus();
     void createToolBars();
-  //void createContextMenu();
-  //void createStatusBar();
 
 
     int is_highlighter;
@@ -106,6 +111,7 @@ private:
 
     QPlainTextEdit *scratcharea1;
     QPlainTextEdit *scratcharea2;
+
     CodeEditor *textarea;
 
     QToolBar *fileToolBar;
@@ -147,9 +153,18 @@ private:
     QAction *blueSchemeAction;
     QAction *standardSchemeAction;
     QAction *hideScratchAction;
+    QAction *hideFileTree;
+    QAction *treeUpAction;
+    QAction *gotoLineEdit;
+    QAction *findAction;
+    QAction *replaceAction;
 
     QDockWidget *dock1;
     QDockWidget *dock2;
+    QDockWidget *downLocationDock;
+    QDockWidget *goButtonDock;
+
+    QWidget *widget;
 
     QActionGroup *Schemes;
 
@@ -160,7 +175,15 @@ private:
     QSplitter *splitter2;
 
     QFileSystemModel *model;
-    QTreeView *tree;
+    QListView *tree;
+
+    QDir *whereWeAre;
+
+    QLineEdit *downLocation;
+
+    QPushButton *goButton;
+
+    QVBoxLayout *fileLayout;
 };
 
 #endif // MAINWINDOW_H

@@ -9,6 +9,8 @@
 #include "codeeditor.h"
 #include "linenumberarea.h"
 
+
+
 CodeEditor::CodeEditor(QWidget *parent) : QPlainTextEdit(parent)
 {
 
@@ -18,7 +20,6 @@ dolinelight = 0;
     connect(this, SIGNAL(blockCountChanged(int)), this, SLOT(updateLineNumberAreaWidth(int)));
     connect(this, SIGNAL(updateRequest(QRect,int)), this, SLOT(updateLineNumberArea(QRect,int)));
     connect(this, SIGNAL(cursorPositionChanged()), this, SLOT(highlightCurrentLine()));
-    //connect(this, SIGNAL(cursorPositionChanged()), this, SLOT(rehighlightBlock));
 
     updateLineNumberAreaWidth(0);
     highlightCurrentLine();
@@ -31,7 +32,6 @@ dolinenums = 0;
     connect(this, SIGNAL(blockCountChanged(int)), this, SLOT(updateLineNumberAreaWidth(int)));
     connect(this, SIGNAL(updateRequest(QRect,int)), this, SLOT(updateLineNumberArea(QRect,int)));
     connect(this, SIGNAL(cursorPositionChanged()), this, SLOT(highlightCurrentLine()));
-    //connect(this, SIGNAL(cursorPositionChanged()), this, SLOT(rehighlightBlock));
 
     updateLineNumberAreaWidth(0);
     highlightCurrentLine();
@@ -195,7 +195,6 @@ void CodeEditor::matchParentheses()
             }
         }
     }
-    //highlightCurrentLine();
 }
 
 bool CodeEditor::matchLeftParenthesis(QTextBlock currentBlock, int i, int numLeftParentheses)
@@ -271,4 +270,5 @@ void CodeEditor::createParenthesisSelection(int pos)
 
     setExtraSelections(selections);
 }
+
 
