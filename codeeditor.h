@@ -23,9 +23,9 @@ public:
 protected:
     void resizeEvent(QResizeEvent *event);
 
-    
+
 signals:
-    
+
 public slots:
 void matchParentheses();
 private slots:
@@ -43,7 +43,7 @@ private:
          int dolinelight;
          QColor BackgroundColor;
          QColor NumbersColor;
-    
+
 };
 
 

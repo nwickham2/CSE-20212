@@ -33,6 +33,6 @@ int main(int argc, char *argv[])
     MainWindow * mainWin = new MainWindow;
     a.setFont(font, "QPlainTextEdit");
     mainWin->show();
-    
+
     return a.exec();
 }

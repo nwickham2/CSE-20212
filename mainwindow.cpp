@@ -184,7 +184,7 @@ void MainWindow::updateStatusBar()
 
 MainWindow::~MainWindow()
 {
-    
+
 }
 
 void MainWindow::createActions()
