@@ -1,3 +1,16 @@
+/*
+Nate Wickham
+Dylan Zaragoza
+Byron Zaragoza
+
+finddialog.cpp
+5/2/2012
+
+FindDialog.cpp sets up the find dialog widget that is used to find and replace text in the textarea.
+Also emits signals that activet slots used in MainWindow to actualy find and repalce the text.
+*/
+
+
 #include <QtGui>
 #include <QDebug>
 #include "finddialog.h"
@@ -74,7 +87,7 @@ void FindDialog::findClicked()
 void FindDialog::replaceClicked()
 {
     QString newText = replaceEdit->text();
-        emit replace(newText);
+    emit replace(newText);
 }
 
 void FindDialog::enableFindButton(const QString &text)

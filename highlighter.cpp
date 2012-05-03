@@ -1,3 +1,16 @@
+/*
+Nate Wickham
+Dylan Zaragoza
+Byron Zaragoza
+
+highlighter.cpp
+5/2/2012
+
+highlighter.cpp defines the highlighter that is set to the text area is the cpp syntax option is toggled on.
+It works primarily to define the rules that apply to the text area to highlight different words differently.
+It also does th ebracket match highlighting.
+*/
+
 #include "highlighter.h"
 #include "codeeditor.h"
 #include <QTextBlockUserData>
@@ -19,7 +32,7 @@ void TextBlockData::insert(ParenthesisInfo *info)
 {
     int i = 0;
     while (i < m_parentheses.size() &&
-        info->position > m_parentheses.at(i)->position)
+           info->position > m_parentheses.at(i)->position)
         ++i;
 
     m_parentheses.insert(i, info);
@@ -62,107 +75,107 @@ Highlighter::Highlighter(QTextDocument *parent, int x)
         highlightingRules.append(rule);
     }
     //classFormat.setFontWeight(QFont::Bold);
-      //   classFormat.setForeground(Qt::darkMagenta);
-       //  rule.pattern = QRegExp("\\bQ[A-Za-z]+\\b");
-       //  rule.format = classFormat;
-        // highlightingRules.append(rule);
+    //   classFormat.setForeground(Qt::darkMagenta);
+    //  rule.pattern = QRegExp("\\bQ[A-Za-z]+\\b");
+    //  rule.format = classFormat;
+    // highlightingRules.append(rule);
 
-         singleLineCommentFormat.setForeground(commentColor);
-         rule.pattern = QRegExp("//[^\n]*");
-         rule.format = singleLineCommentFormat;
-         highlightingRules.append(rule);
+    singleLineCommentFormat.setForeground(commentColor);
+    rule.pattern = QRegExp("//[^\n]*");
+    rule.format = singleLineCommentFormat;
+    highlightingRules.append(rule);
 
-         multiLineCommentFormat.setForeground(commentColor);
+    multiLineCommentFormat.setForeground(commentColor);
 
-         commentStartExpression = QRegExp("/\\*");
-         commentEndExpression = QRegExp("\\*/");
+    commentStartExpression = QRegExp("/\\*");
+    commentEndExpression = QRegExp("\\*/");
 
-         typeFormat.setForeground(typeColor);
-         typeFormat.setFontWeight(QFont::Bold);
-         QStringList typePatterns;
-         typePatterns << "\\bint\\b" << "\\bchar\\b" << "\\bdouble\\b" << "\\benum\\b" << "\\blong\\b" << "\\bshort\\b" << "\\bvoid\\b";
-         foreach(const QString &pattern, typePatterns)
-         {
-             rule.pattern = QRegExp(pattern);
-             rule.format = typeFormat;
-             highlightingRules.append(rule);
-         }
+    typeFormat.setForeground(typeColor);
+    typeFormat.setFontWeight(QFont::Bold);
+    QStringList typePatterns;
+    typePatterns << "\\bint\\b" << "\\bchar\\b" << "\\bdouble\\b" << "\\benum\\b" << "\\blong\\b" << "\\bshort\\b" << "\\bvoid\\b";
+    foreach(const QString &pattern, typePatterns)
+    {
+        rule.pattern = QRegExp(pattern);
+        rule.format = typeFormat;
+        highlightingRules.append(rule);
+    }
 
-         numberFormat.setForeground(numberColor);
-         rule.pattern = QRegExp("\\b[0-9]+\\b");
-         rule.format = numberFormat;
-         highlightingRules.append(rule);
+    numberFormat.setForeground(numberColor);
+    rule.pattern = QRegExp("\\b[0-9]+\\b");
+    rule.format = numberFormat;
+    highlightingRules.append(rule);
 
-         bracketFormat.setForeground(bracketColor);
-         QStringList bracketPatterns;
-         bracketPatterns << "[(){}]";
-         foreach(const QString &pattern, bracketPatterns)
-         {
-             rule.pattern = QRegExp(pattern);
-             rule.format = bracketFormat;
-             highlightingRules.append(rule);
-         }
-
-
+    bracketFormat.setForeground(bracketColor);
+    QStringList bracketPatterns;
+    bracketPatterns << "[(){}]";
+    foreach(const QString &pattern, bracketPatterns)
+    {
+        rule.pattern = QRegExp(pattern);
+        rule.format = bracketFormat;
+        highlightingRules.append(rule);
+    }
 
 
 
-     }
+
+
+}
 
 void Highlighter::highlightBlock(const QString &text)
- {
-     foreach (const HighlightingRule &rule, highlightingRules) {
-         QRegExp expression(rule.pattern);
-         int index = expression.indexIn(text);
-         while (index >= 0) {
-             int length = expression.matchedLength();
-             setFormat(index, length, rule.format);
-             index = expression.indexIn(text, index + length);
-         }
-     }
-      setCurrentBlockState(0);
-      int startIndex = 0;
-           if (previousBlockState() != 1)
-               startIndex = commentStartExpression.indexIn(text);
-           while (startIndex >= 0) {
-                   int endIndex = commentEndExpression.indexIn(text, startIndex);
-                   int commentLength;
-                   if (endIndex == -1) {
-                       setCurrentBlockState(1);
-                       commentLength = text.length() - startIndex;
-                   } else {
-                       commentLength = endIndex - startIndex
-                                       + commentEndExpression.matchedLength();
-                   }
-                   setFormat(startIndex, commentLength, multiLineCommentFormat);
-                   startIndex = commentStartExpression.indexIn(text, startIndex + commentLength);
-               }
+{
+    foreach (const HighlightingRule &rule, highlightingRules) {
+        QRegExp expression(rule.pattern);
+        int index = expression.indexIn(text);
+        while (index >= 0) {
+            int length = expression.matchedLength();
+            setFormat(index, length, rule.format);
+            index = expression.indexIn(text, index + length);
+        }
+    }
+    setCurrentBlockState(0);
+    int startIndex = 0;
+    if (previousBlockState() != 1)
+        startIndex = commentStartExpression.indexIn(text);
+    while (startIndex >= 0) {
+        int endIndex = commentEndExpression.indexIn(text, startIndex);
+        int commentLength;
+        if (endIndex == -1) {
+            setCurrentBlockState(1);
+            commentLength = text.length() - startIndex;
+        } else {
+            commentLength = endIndex - startIndex
+                    + commentEndExpression.matchedLength();
+        }
+        setFormat(startIndex, commentLength, multiLineCommentFormat);
+        startIndex = commentStartExpression.indexIn(text, startIndex + commentLength);
+    }
 
-           TextBlockData *data = new TextBlockData;
+    TextBlockData *data = new TextBlockData;
 
-           int leftPos = text.indexOf('{');
-           while (leftPos != -1) {
-               ParenthesisInfo *info = new ParenthesisInfo;
-               info->character = '{';
-               info->position = leftPos;
+    int leftPos = text.indexOf('{');
+    while (leftPos != -1) {
+        ParenthesisInfo *info = new ParenthesisInfo;
+        info->character = '{';
+        info->position = leftPos;
 
-               data->insert(info);
-               leftPos = text.indexOf('{', leftPos + 1);
-           }
+        data->insert(info);
+        leftPos = text.indexOf('{', leftPos + 1);
+    }
 
-           int rightPos = text.indexOf('}');
-           while (rightPos != -1) {
-               ParenthesisInfo *info = new ParenthesisInfo;
-               info->character = '}';
-               info->position = rightPos;
+    int rightPos = text.indexOf('}');
+    while (rightPos != -1) {
+        ParenthesisInfo *info = new ParenthesisInfo;
+        info->character = '}';
+        info->position = rightPos;
 
-               data->insert(info);
+        data->insert(info);
 
-               rightPos = text.indexOf('}', rightPos +1);
-           }
+        rightPos = text.indexOf('}', rightPos +1);
+    }
 
-           setCurrentBlockUserData(data);
-           }
+    setCurrentBlockUserData(data);
+}
 
 void Highlighter::setScheme(int x)
 {

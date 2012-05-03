@@ -1,3 +1,16 @@
+/*
+Nate Wickham
+Dylan Zaragoza
+Byron Zaragoza
+
+mainwindow.cpp
+5/2/2012
+
+mainwindow.cpp is the primary driver of the text editor. It contains the finddialog, the codeeditor, and, through those, the other classes.
+Mainwindow also has many built in functions.  Primarily, it has the menus, tootlbars, statusbar, scratchareas, file tree, and the primary text area.
+It handles text input and output, all of the file I/O, and all of the actions. It also takes the key input.
+*/
+
 #include "mainwindow.h"
 #include "finddialog.h"
 #include <QPlainTextEdit>
@@ -37,155 +50,103 @@ using namespace std;
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
-    goButton = new QPushButton(tr("Go"));
     downLocation = new QLineEdit;
     whereWeAre = new QDir(QDir::current());
     MainWindow::currentScheme = 3;
-textarea = new CodeEditor;
-setCentralWidget(textarea);
-setAttribute(Qt::WA_DeleteOnClose);
-textarea->setLineWrapMode(QPlainTextEdit::NoWrap);
-QPalette p = textarea->palette();
-QColor backcolor(255, 255, 255);
-p.setColor(QPalette::Base, backcolor);
-QColor fontcolor(0, 0, 0);
-p.setColor(QPalette::Text, fontcolor);
-p.setColor(QPalette::Highlight, Qt::red);
-textarea->setPalette(p);
-is_highlighter = 0;
-currentPath = new QLabel(whereWeAre->absolutePath());
-widget = new QWidget;
-splitter2 = new QSplitter;
-model = new QFileSystemModel;
-model->setRootPath(QDir::currentPath());
-commands = new QStringList;
-lastCommand = 0;
-QStringList filters ;
-filters << "*.txt" << "*.cpp" << "*.h" << "*.java" << "*.c" << "Makefile";
-model->setNameFilters(filters);
-model->setNameFilterDisables(false);
-tree = new QListView(splitter2);
+    textarea = new CodeEditor;
+    setCentralWidget(textarea);
+    setAttribute(Qt::WA_DeleteOnClose);
+    textarea->setLineWrapMode(QPlainTextEdit::NoWrap);
+
+    QPalette p = textarea->palette(); //gets the textarea's current color scheme, put sinto palette
+    QColor backcolor(255, 255, 255);
+    p.setColor(QPalette::Base, backcolor); //sets palette's backgroudn color variable
+    QColor fontcolor(0, 0, 0);
+    p.setColor(QPalette::Text, fontcolor); //sets palette's text colro variable
+    p.setColor(QPalette::Highlight, Qt::red); //sets palette's highlighted text color variable
+    textarea->setPalette(p); //applies the new palette to the text area.
+
+    is_highlighter = 0;
+
+    //sets up fiel tree
+    currentPath = new QLabel(whereWeAre->absolutePath()); //gets the current path fo the active directory
+    model = new QFileSystemModel; // makes a model fo the fiel system
+    model->setRootPath(QDir::currentPath()); //sets the root path of the model to the current path
+    commands = new QStringList; //sets the enteretd commands for navigatign the tree
+    lastCommand = 0;
+    QStringList filters ;
+    filters << "*.txt" << "*.cpp" << "*.h" << "*.java" << "*.c" << "Makefile"; //sets what types of fiel are dispalyed in the tree
+    model->setNameFilters(filters);
+    model->setNameFilterDisables(false);
+    widget = new QWidget;
+    tree = new QListView(widget);
     tree->setModel(model);
     tree->setRootIndex(model->index(QDir::currentPath()));
-         files = new QDockWidget(tr("Files"), this);
-         files->setWidget(tree);
-         //splitter->addWidget(downLocation);
-        // splitter->addWidget(goButton);
-                  downLocationDock = new QDockWidget(tr("Enter Directory"), this);
-                 // fileLayout = new QVBoxLayout;
-                 // fileLayout->addWidget(downLocation);
-                 // fileLayout->addWidget(currentPath);
-                  //fileLayout->addWidget(goButton);
-                 // fileLayout->setContentsMargins(1, 1, 1, 1);
-                 // widget->setLayout(fileLayout);
-                  downLocationDock->setWidget(downLocation);
-                  goButtonDock = new QDockWidget(tr("Current Directory"), this);
-                  goButtonDock->setWidget(currentPath);
-                  addDockWidget(Qt::LeftDockWidgetArea, downLocationDock);
-                  addDockWidget(Qt::LeftDockWidgetArea, goButtonDock);
-         addDockWidget(Qt::LeftDockWidgetArea, files);
-         tree->setSelectionMode(QListView::SingleSelection);
-        // tree->hideColumn(1);
-        // tree->hideColumn(2);
-
-        // tree->hideColumn(3);
+    files = new QDockWidget(tr("Files"), this);
+    files->setWidget(tree);
+    downLocationDock = new QDockWidget(tr("Enter Directory"), this);
+    downLocationDock->setWidget(downLocation);
+    goButtonDock = new QDockWidget(tr("Current Directory"), this);
+    goButtonDock->setWidget(currentPath);
+    addDockWidget(Qt::LeftDockWidgetArea, downLocationDock); //sets the lien edit to the dock
+    addDockWidget(Qt::LeftDockWidgetArea, goButtonDock); //sets the label with the current directory to the dock
+    addDockWidget(Qt::LeftDockWidgetArea, files); //puts the list view to the dock
+    tree->setSelectionMode(QListView::SingleSelection);
 
 
 
 
-createActions();
-createMenus();
-createToolBars();
-readSettings();
-setCurrentFile("");
+    createActions(); //initliazes all fo the editor
+    createMenus();
+    createToolBars();
+    readSettings();
+    setCurrentFile("");
 
-if(MainWindow::currentScheme == 1)
-    darkSchemeAction->setChecked(true);
+    if(MainWindow::currentScheme == 1)
+        darkSchemeAction->setChecked(true);
     else if(MainWindow::currentScheme == 2)
-    blueSchemeAction->setChecked(true);
+        blueSchemeAction->setChecked(true);
     else if(MainWindow::currentScheme == 3)
-    standardSchemeAction->setChecked(true);
-/*
-if(lineNumbers)
-{
-    lineNumberAction->setChecked(true);
-}
+        standardSchemeAction->setChecked(true);
+    QString msg = QString( "Line Count: %1, Cursor Text Position: %2, column: %3" ) //sets up status bar
+            .arg( textarea->document()->lineCount() )
+            .arg( textarea->textCursor().blockNumber() +1 )
+            .arg( textarea->textCursor().columnNumber()+1 );
 
-    if(syntax)
-    {
-        cppSyntax->setChecked(true);
-    }
-    else cppSyntax->setChecked(false);
+    curLine = new QLabel(msg);
+    statusBar()->addWidget(curLine);
 
-        if(lineHighlight)
-        {
-            lineHighLightAction->setChecked(true);
-        }
-        else lineHighLightAction->setChecked(false);
-
-            if(hidescratch)
-            {
-                hideScratchAction->setChecked(true);
-            }
-            else hideScratchAction->setChecked(false);
-
-                if(linewrap)
-                {
-                    lineWrapAction->setChecked(true);
-                }
-                else lineWrapAction->setChecked(false);
-*/
-                QString msg = QString( "Line Count: %1, Cursor Text Position: %2, column: %3" )
-                        .arg( textarea->document()->lineCount() )
-                        .arg( textarea->textCursor().blockNumber() +1 )
-                        .arg( textarea->textCursor().columnNumber()+1 );
-
-                curLine = new QLabel(msg);
-                statusBar()->addWidget(curLine);
-
-connect(textarea, SIGNAL(cursorPositionChanged()), this, SLOT(updateStatusBar()));
-
-dock1 = new QDockWidget(tr("scratch area"), this);
-dock2 = new QDockWidget(tr("scratch area"), this);
-addDockWidget(Qt::BottomDockWidgetArea, dock1 );
-addDockWidget(Qt::BottomDockWidgetArea, dock2 );
-scratcharea1 = new QPlainTextEdit;
-scratcharea2 = new QPlainTextEdit;
-dock1 -> setWidget(scratcharea1);
-dock2 -> setWidget(scratcharea2);
-dock1->setFeatures(QDockWidget::NoDockWidgetFeatures);
-dock2->setFeatures(QDockWidget::NoDockWidgetFeatures);
-dock1->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
-dock2->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
-tabifyDockWidget(dock1, dock2);
-files->setFeatures(QDockWidget::NoDockWidgetFeatures);
-files->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
-downLocationDock->setFeatures(QDockWidget::NoDockWidgetFeatures);
-downLocationDock->setFeatures(QDockWidget::NoDockWidgetFeatures);
-//downLocationDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
-goButtonDock->setFeatures(QDockWidget::NoDockWidgetFeatures);
-//downLocationDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
-/*
-if(hidescratch)
-{
-    hideScratchAction->setChecked(true);
-    removeDockWidget(dock1);
-    removeDockWidget(dock2);
-}
-else
-{hideScratchAction->setChecked(false);
-    restoreDockWidget(dock1);
-    restoreDockWidget(dock2);
-}
-
-*/
+    connect(textarea, SIGNAL(cursorPositionChanged()), this, SLOT(updateStatusBar())); //when cursor pos changes, so does status bar
 
 
-dialog = new FindDialog(this);
+    //sets up the scratch areas
+    dock1 = new QDockWidget(tr("scratch area"), this);
+    dock2 = new QDockWidget(tr("scratch area"), this);
+    addDockWidget(Qt::BottomDockWidgetArea, dock1 );
+    addDockWidget(Qt::BottomDockWidgetArea, dock2 );
+    scratcharea1 = new QPlainTextEdit;
+    scratcharea2 = new QPlainTextEdit;
+    dock1 -> setWidget(scratcharea1);
+    dock2 -> setWidget(scratcharea2);
 
-connect(dialog, SIGNAL(findPrevious(QString, Qt::CaseSensitivity)), this, SLOT(idontknow(QString, Qt::CaseSensitivity)));
-connect(dialog, SIGNAL(findNext(QString, Qt::CaseSensitivity)), this, SLOT(idontknow2(QString, Qt::CaseSensitivity)));
-connect(dialog, SIGNAL(replace(QString)), this, SLOT(idontknow3(QString)));
+    //sets what allthe docks can do
+    dock1->setFeatures(QDockWidget::NoDockWidgetFeatures);
+    dock2->setFeatures(QDockWidget::NoDockWidgetFeatures);
+    dock1->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
+    dock2->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
+    tabifyDockWidget(dock1, dock2);
+    files->setFeatures(QDockWidget::NoDockWidgetFeatures);
+    files->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
+    downLocationDock->setFeatures(QDockWidget::NoDockWidgetFeatures);
+    downLocationDock->setFeatures(QDockWidget::NoDockWidgetFeatures);
+    goButtonDock->setFeatures(QDockWidget::NoDockWidgetFeatures);
+
+//makes find dialog and conencts it
+    dialog = new FindDialog(this);
+
+    connect(dialog, SIGNAL(findPrevious(QString, Qt::CaseSensitivity)), this, SLOT(idontknow(QString, Qt::CaseSensitivity)));
+    connect(dialog, SIGNAL(findNext(QString, Qt::CaseSensitivity)), this, SLOT(idontknow2(QString, Qt::CaseSensitivity)));
+    connect(dialog, SIGNAL(replace(QString)), this, SLOT(idontknow3(QString)));
 
 }
 
@@ -196,12 +157,7 @@ void MainWindow::updateStatusBar()
             .arg( textarea->textCursor().blockNumber()+1 )
             .arg( textarea->textCursor().columnNumber()+1 );
 
-        statusBar()->showMessage( msg );
-
-}
-
-MainWindow::~MainWindow()
-{
+    statusBar()->showMessage( msg );
 
 }
 
@@ -248,10 +204,10 @@ void MainWindow::createActions()
 
     for (int i = 0; i < MaxRecentFiles; ++i)
     {
-    recentFileActions[i] = new QAction(this);
-    recentFileActions[i]->setVisible(false);
-    connect(recentFileActions[i], SIGNAL(triggered()),
-    this, SLOT(openRecentFile()));
+        recentFileActions[i] = new QAction(this);
+        recentFileActions[i]->setVisible(false);
+        connect(recentFileActions[i], SIGNAL(triggered()),
+                this, SLOT(openRecentFile()));
     }
 
     selectAllAction = new QAction(tr("&All"), this);
@@ -315,7 +271,6 @@ void MainWindow::createActions()
 
     lineHighLightAction = new QAction(tr("&Line Highlight"), this);
     lineHighLightAction->setCheckable(true);
-    //lineHighLightAction->setChecked(false);
     lineHighLightAction->setStatusTip(tr("Highlight current line"));
     connect(lineHighLightAction, SIGNAL(toggled(bool)), this, SLOT(doLineHighLight(bool)));
 
@@ -365,7 +320,7 @@ void MainWindow::createActions()
     grammarHighlightAction->setCheckable(true);
     connect(grammarHighlightAction, SIGNAL(toggled(bool)), this , SLOT(grammarHighlight(bool)));
 
-
+//sets the icons for all of the actions.  needs to be changed on new comp.  mayeb add src file?
     newAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/New.png"));
     openAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Open.png"));
     saveAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/Save.png"));
@@ -386,36 +341,16 @@ void MainWindow::createActions()
     aboutAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/About.png"));
     lineNumberAction->setIcon(QIcon("C:/Users/Nate/Desktop/Qtstuff/texteditor/LineNumbers.png"));
 
-
-   /* newAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/New.png"));
-    openAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Open.png"));
-    saveAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Save.png"));
-    saveAsAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/SaveAs.png"));
-    closeAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Close.png"));
-    printAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Print.png"));
-    exitAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Exit.png"));
-    selectAllAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Select.png"));
-    findAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Replace.png"));
-    cutAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Cut.png"));
-    copyAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Copy.png"));
-    pasteAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Paste.png"));
-    deleteAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Delete.png"));
-    undoAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Undo.png"));
-    redoAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Redo.png"));
-    cppSyntax->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/Highlight.png"));
-    aboutQtAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/QtAbout.png"));
-    aboutAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/About.png"));
-    lineNumberAction->setIcon(QIcon("C:/Users/Byron/CSE-20212/Images/LineNumbers.png"));*/
 }
 
-void MainWindow::giveEditFocus()
+void MainWindow::giveEditFocus() //sets position of cursor from textarea to the fiel tree line edit
 {
     qDebug() << "check" << endl;
     if(textarea->hasFocus())
     {
-    textarea->clearFocus();
-    downLocation->activateWindow();
-downLocation->setFocus();
+        textarea->clearFocus();
+        downLocation->activateWindow();
+        downLocation->setFocus();
     }
     else
     {
@@ -425,7 +360,7 @@ downLocation->setFocus();
     }
 }
 
-void MainWindow::gotoDirect()
+void MainWindow::gotoDirect() //handles input in the file tree lien edit
 {
 
     bool result;
@@ -433,10 +368,10 @@ void MainWindow::gotoDirect()
     QString entered = downLocation->text();
     commands->push_back(entered);
     lastCommand = commands->size() - 1;
-     QStringList list = entered.split(" ");
-     if(list[0] == "cd")
-         entered = list[1];
-     if(list[0] == "mkdir")
+    QStringList list = entered.split(" ");
+    if(list[0] == "cd") //adds cd command
+        entered = list[1];
+    if(list[0] == "mkdir") //adds mkdir command
     {
         if(list[0] == "mkdir" && list.size() == 2)
             result = whereWeAre->mkdir(list[1]);
@@ -444,99 +379,86 @@ void MainWindow::gotoDirect()
             qDebug() << "yes"  << endl;
         else
             qDebug() << "No"  << endl;
-                downLocation->clear();
+        downLocation->clear();
         return;
 
     }
-     else if(list[0] == "rmdir")
-     {
-         if(list.size() == 2)
-         {
-             int r = QMessageBox::warning(this, tr("QTextEdit"), tr("Are you sure you want to delete the directory ") + list[1] + tr(" and all its contents?"), QMessageBox::Yes | QMessageBox::Default, QMessageBox::No, QMessageBox::Cancel | QMessageBox::Escape);
-             if (r == QMessageBox::Yes)
-             {
-                 whereWeAre->rmdir(list[1]);
-             }
-             else if (r == QMessageBox::Cancel)
-             {
+    else if(list[0] == "rmdir") //adds rmdir command
+    {
+        if(list.size() == 2)
+        {
+            int r = QMessageBox::warning(this, tr("QTextEdit"), tr("Are you sure you want to delete the directory ") + list[1] + tr(" and all its contents?"), QMessageBox::Yes | QMessageBox::Default, QMessageBox::No, QMessageBox::Cancel | QMessageBox::Escape);
+            if (r == QMessageBox::Yes) //asks user if sure they want to delete directory
+            {
+                whereWeAre->rmdir(list[1]);
+            }
+            else if (r == QMessageBox::Cancel)
+            {
 
-             }
+            }
 
-             downLocation->clear();
-     return;
-         }
-     }
-    if(entered == "C:" || entered == "~")
+            downLocation->clear();
+            return;
+        }
+    }
+    if(entered == "C:" || entered == "~") //allows navigation to rppt directory, C:
     {
         desired = "C:";
     }
     else if(entered[0] == 'C' && entered[1] == ':')
     {
-desired = entered;
+        desired = entered;
     }
-    else if(entered[0] == '/')
-       desired = whereWeAre->absolutePath() + entered;
-     else
-    desired = whereWeAre->absolutePath() + '/' + entered;
+    else if(entered[0] == '/') //allows enterign of new path with preceding \ or without
+        desired = whereWeAre->absolutePath() + entered;
+    else
+        desired = whereWeAre->absolutePath() + '/' + entered;
     QModelIndex useIndex = model->index(desired);
     QDir desiredDir(desired);
     if(desiredDir.isReadable() == true)
     {
-    tree->setRootIndex(useIndex);
-    //tree->collapseAll();
-    qDebug() << "is readable" << endl;
-    whereWeAre->cd(desired);
-    currentPath->setText(whereWeAre->absolutePath());
+        tree->setRootIndex(useIndex);
+        //tree->collapseAll();
+        qDebug() << "is readable" << endl;
+        whereWeAre->cd(desired);
+        currentPath->setText(whereWeAre->absolutePath());
     }
-        downLocation->clear();
+    downLocation->clear();
 }
 
-void MainWindow::treeUp()
+void MainWindow::treeUp() //moves the tree upa  directory and sets the current path and active direcotry to this location
 {
-   /* QFile file(curFile);
-    QFileInfo info(file);
-    QString string = info.absolutePath();
-qDebug() << string << endl;
-QModelIndex currentIndex = model->index(string);
-QFileInfo info3 = model->fileInfo(currentIndex);
-QString string3 = info3.absoluteFilePath();
-qDebug() << string3 << endl;*/
-//QModelIndex highIndex = tree->indexAbove(currentIndex);
-//QFileInfo info2 = model->fileInfo(highIndex);
-//QString string2 = info2.absolutePath();
-//qDebug() << string2 << endl;
 
     whereWeAre->cdUp();
-        currentPath->setText(whereWeAre->absolutePath());
+    currentPath->setText(whereWeAre->absolutePath());
     QModelIndex useIndex = model->index(whereWeAre->absolutePath());
     tree->setRootIndex(useIndex);
-  //  tree->collapseAll();
 
 }
 
 
-void MainWindow::openTreeFile()
+void MainWindow::openTreeFile() //allows the user to open a file form the fiel tree
 {
-    QModelIndexList selected = tree->selectionModel()->selectedIndexes();
-    QFileInfo fileInfo = model->fileInfo(selected[0]);
-    QString fileName = fileInfo.absoluteFilePath();
-    QString type = model->type(selected[0]);
+    QModelIndexList selected = tree->selectionModel()->selectedIndexes(); //adds all selected to a list.  since only oen can be slected, only lenght one
+    QFileInfo fileInfo = model->fileInfo(selected[0]);//gets fiel info of selected
+    QString fileName = fileInfo.absoluteFilePath(); //gets fiel name of selected form info
+    QString type = model->type(selected[0]); //gets fiel type of selected
     qDebug() << type << endl;
-    if(okToContinue() && model->type(selected[0]) != "File Folder")
+    if(model->type(selected[0]) != "File Folder" && okToContinue()) //if it's not a folder, then check for window modificaiton and load file
     {
         whereWeAre->cd(model->filePath(selected[0]));
         model->setRootPath(model->filePath(selected[0]));
         tree->setRootIndex(selected[0]);
-    loadFile(fileName);
-    setCurrentFile(fileName);
+        loadFile(fileName);
+        setCurrentFile(fileName);
     }
-    if(model->type(selected[0]) == "File Folder")
+    if(model->type(selected[0]) == "File Folder") //if it is a folder, then go to that directory and change active directory to that location
     {
         whereWeAre->cd(model->filePath(selected[0]));
         model->setRootPath(model->filePath(selected[0]));
         tree->setRootIndex(selected[0]);
     }
-        currentPath->setText(whereWeAre->absolutePath());
+    currentPath->setText(whereWeAre->absolutePath());
 }
 
 
@@ -545,15 +467,15 @@ void MainWindow::hideScratch(bool x)
 {
     if(x == true)
     {
-removeDockWidget(dock1);
-removeDockWidget(dock2);
-hidescratch = 1;
+        removeDockWidget(dock1);
+        removeDockWidget(dock2);
+        hidescratch = 1;
     }
     else if(x == false)
     {
         restoreDockWidget(dock1);
-    restoreDockWidget(dock2);
-    hidescratch = 0;
+        restoreDockWidget(dock2);
+        hidescratch = 0;
     }
 }
 
@@ -561,12 +483,14 @@ void MainWindow::hidetree(bool x)
 {
     if(x == true)
     {
-       removeDockWidget(files);
-       removeDockWidget(downLocationDock);
+        removeDockWidget(files);
+        removeDockWidget(downLocationDock);
+        removeDockWidget(goButtonDock);
     }
     else if(x == false)
     {
         restoreDockWidget(downLocationDock);
+        removeDockWidget(goButtonDock);
         restoreDockWidget(files);
     }
 }
@@ -578,8 +502,8 @@ void MainWindow::selectDarkColorScheme(bool x)
         if(cppSyntax->isChecked())
         {
             delete highlighter;
-        MainWindow::currentScheme = 1;
-        highlighter = new Highlighter(textarea->document(), MainWindow::currentScheme);
+            MainWindow::currentScheme = 1;
+            highlighter = new Highlighter(textarea->document(), MainWindow::currentScheme);
         }
         else
             MainWindow::currentScheme = 1;
@@ -590,7 +514,7 @@ void MainWindow::selectDarkColorScheme(bool x)
         p.setColor(QPalette::Text, fontcolor);
         textarea->setPalette(p);
         textarea->setColors(MainWindow::currentScheme);
-}
+    }
 }
 
 void MainWindow::selectBlueColorScheme(bool x)
@@ -600,8 +524,8 @@ void MainWindow::selectBlueColorScheme(bool x)
         if(cppSyntax->isChecked())
         {
             delete highlighter;
-        MainWindow::currentScheme = 2;
-        highlighter = new Highlighter(textarea->document(), MainWindow::currentScheme);
+            MainWindow::currentScheme = 2;
+            highlighter = new Highlighter(textarea->document(), MainWindow::currentScheme);
         }
         else
             MainWindow::currentScheme = 2;
@@ -612,7 +536,7 @@ void MainWindow::selectBlueColorScheme(bool x)
         p.setColor(QPalette::Text, fontcolor);
         textarea->setPalette(p);
         textarea->setColors(MainWindow::currentScheme);
-}
+    }
 }
 
 void MainWindow::selectStandardColorScheme(bool x)
@@ -622,8 +546,8 @@ void MainWindow::selectStandardColorScheme(bool x)
         if(cppSyntax->isChecked())
         {
             delete highlighter;
-        MainWindow::currentScheme = 3;
-        highlighter = new Highlighter(textarea->document(), MainWindow::currentScheme);
+            MainWindow::currentScheme = 3;
+            highlighter = new Highlighter(textarea->document(), MainWindow::currentScheme);
         }
         else
             MainWindow::currentScheme = 3;
@@ -634,7 +558,7 @@ void MainWindow::selectStandardColorScheme(bool x)
         p.setColor(QPalette::Text, fontcolor);
         textarea->setPalette(p);
         textarea->setColors(MainWindow::currentScheme);
-}
+    }
 }
 
 void MainWindow::createMenus()
@@ -666,10 +590,10 @@ void MainWindow::createMenus()
     selectSubMenu->addAction(selectAllAction);
     editMenu->addSeparator();
 
-    toolOptions = new QActionGroup(this);
-toolOptions->addAction(cppSyntax);
-toolOptions->addAction(lineHighLightAction);
-toolOptions->addAction(grammarHighlightAction);
+    toolOptions = new QActionGroup(this); //makes the actions in group radio, only oen highlighting option at a time
+    toolOptions->addAction(cppSyntax);
+    toolOptions->addAction(lineHighLightAction);
+    toolOptions->addAction(grammarHighlightAction);
     toolsMenu = menuBar()->addMenu(tr("&Tools"));
     toolsMenu->addAction(cppSyntax);
     toolsMenu->addAction(lineNumberAction);
@@ -683,7 +607,7 @@ toolOptions->addAction(grammarHighlightAction);
     toolsMenu->addAction(grammarHighlightAction);
     colorSchemeSubMenu = optionsMenu->addMenu(tr("Color Scheme..."));
 
-    Schemes = new QActionGroup(this);
+    Schemes = new QActionGroup(this);//makes the actions in group radio, only oen scheme at a time
     Schemes->addAction(darkSchemeAction);
     Schemes->addAction(blueSchemeAction);
     Schemes->addAction(standardSchemeAction);
@@ -701,51 +625,49 @@ toolOptions->addAction(grammarHighlightAction);
 
 void MainWindow::createToolBars()
 {
-fileToolBar = addToolBar(tr("&File"));
-fileToolBar->addAction(newAction);
-fileToolBar->addAction(openAction);
-fileToolBar->addAction(saveAction);
-fileToolBar->addAction(printAction);
+    fileToolBar = addToolBar(tr("&File"));
+    fileToolBar->addAction(newAction);
+    fileToolBar->addAction(openAction);
+    fileToolBar->addAction(saveAction);
+    fileToolBar->addAction(printAction);
 
-editToolBar = addToolBar(tr("&Edit"));
-editToolBar->addAction(cutAction);
-editToolBar->addAction(copyAction);
-editToolBar->addAction(pasteAction);
-editToolBar->addSeparator();
-editToolBar->addAction(undoAction);
-editToolBar->addAction(redoAction);
-editToolBar->addAction(findAction);
+    editToolBar = addToolBar(tr("&Edit"));
+    editToolBar->addAction(cutAction);
+    editToolBar->addAction(copyAction);
+    editToolBar->addAction(pasteAction);
+    editToolBar->addSeparator();
+    editToolBar->addAction(undoAction);
+    editToolBar->addAction(redoAction);
+    editToolBar->addAction(findAction);
 
-toolsToolBar = addToolBar(tr("&Tools"));
-toolsToolBar->addAction(cppSyntax);
-toolsToolBar->addAction(lineNumberAction);
-toolsToolBar->addAction(lineHighLightAction);
-addToolBarBreak(Qt::TopToolBarArea);
-optionsToolBar = addToolBar(tr("&Options"));
-optionsToolBar->addAction(lineWrapAction);
-optionsToolBar->addAction(hideScratchAction);
-optionsToolBar->addAction(hideFileTree);
-optionsToolBar->addAction(gotoLineEdit);
-optionsToolBar->addAction(grammarHighlightAction);
-//editToolBar->addAction(findAction);
-//editToolBar->addAction(goToCellAction);
+    toolsToolBar = addToolBar(tr("&Tools"));
+    toolsToolBar->addAction(cppSyntax);
+    toolsToolBar->addAction(lineNumberAction);
+    toolsToolBar->addAction(lineHighLightAction);
+    addToolBarBreak(Qt::TopToolBarArea);
+    optionsToolBar = addToolBar(tr("&Options"));
+    optionsToolBar->addAction(lineWrapAction);
+    optionsToolBar->addAction(hideScratchAction);
+    optionsToolBar->addAction(hideFileTree);
+    optionsToolBar->addAction(gotoLineEdit);
+    optionsToolBar->addAction(grammarHighlightAction);
 }
 
 void MainWindow::changeWindowModification()
 {if(!textarea->document()->isEmpty())
-    setWindowModified(1);
+        setWindowModified(1);
 }
 
 void MainWindow::printf()
 {
     QTextDocument *document = textarea->document();
-         QPrinter printer;
+    QPrinter printer;
 
-         QPrintDialog *dlg = new QPrintDialog(&printer, this);
-         if (dlg->exec() != QDialog::Accepted)
-             return;
+    QPrintDialog *dlg = new QPrintDialog(&printer, this);
+    if (dlg->exec() != QDialog::Accepted)
+        return;
 
-         document->print(&printer);
+    document->print(&printer);
 }
 
 void MainWindow::find()
@@ -759,13 +681,13 @@ void MainWindow::find()
 void MainWindow::grammarHighlight(bool x)
 {
     if(x == true && !is_highlighter)
-textarea->deleteHighlighter(x);
+        textarea->deleteHighlighter(x);
     if(x == false)
         textarea->deleteHighlighter(x);
 
 }
 
-void MainWindow::idontknow2(QString text, Qt::CaseSensitivity cs)
+void MainWindow::idontknow2(QString text, Qt::CaseSensitivity cs) //finds text movign downward
 {
     if (!text.isEmpty())
     {
@@ -798,7 +720,7 @@ void MainWindow::idontknow2(QString text, Qt::CaseSensitivity cs)
     }
 }
 
-void MainWindow::idontknow(QString text, Qt::CaseSensitivity cs)
+void MainWindow::idontknow(QString text, Qt::CaseSensitivity cs)// finds text moving upward
 {
     if (!text.isEmpty())
     {
@@ -829,7 +751,7 @@ void MainWindow::idontknow(QString text, Qt::CaseSensitivity cs)
     }
 }
 
-void MainWindow::idontknow3(QString text)
+void MainWindow::idontknow3(QString text) //replaces selected text
 {
     if (!text.isEmpty())
     {
@@ -862,7 +784,7 @@ void MainWindow::syntaxHighlight(bool x)
         connect(textarea, SIGNAL(cursorPositionChanged()),
                 textarea, SLOT(matchParentheses()));
         highlighter = new Highlighter(textarea->document(), MainWindow::currentScheme);
-textarea->matchParentheses();
+        textarea->matchParentheses();
     }
     else
     {
@@ -870,7 +792,7 @@ textarea->matchParentheses();
         delete highlighter;
         is_highlighter = 0;
         disconnect(textarea, SIGNAL(cursorPositionChanged()),
-                textarea, SLOT(matchParentheses()));
+                   textarea, SLOT(matchParentheses()));
     }
 }
 
@@ -881,7 +803,7 @@ void MainWindow::lineWrapSlot(bool x)
         textarea->setLineWrapMode(QPlainTextEdit::WidgetWidth);
         linewrap = 1;
     }
-        else
+    else
     {
         textarea->setLineWrapMode(QPlainTextEdit::NoWrap);
         linewrap = 0;
@@ -908,68 +830,28 @@ void MainWindow::doLineHighLight(bool x)
 
 void MainWindow::doLineNumbers(bool x)
 {
-  /*  if(is_highlighter)
-        delete highlighter;
-    QTabWidget::TabPosition order;
-    order = tabPosition(Qt::BottomDockWidgetArea);
-    QString temp, temp1, temp2;
-    QPlainTextEdit *holder = new QPlainTextEdit;
-    setCentralWidget(holder);
-    temp = textarea->toPlainText();
-    temp1 = scratcharea1->toPlainText();
-    temp2 = scratcharea2->toPlainText();*/
     if(x == true)
     {
         lineNumbers = 1;
         textarea->setdolines(1);
         textarea->init();
-      //  delete textarea;
-     //   textarea = new CodeEditor(temp);
     }
     else
     {
         lineNumbers = 0;
         textarea->setdolines(0);
         textarea->uninit();
-      //  delete textarea;
-      //  textarea = new QPlainTextEdit(temp);
     }
-   /* setCentralWidget(textarea);
-    createActions();
-
-    if(is_highlighter)
-        highlighter = new Highlighter(textarea->document());
-    delete dock1;
-    delete dock2;
-    dock1 = new QDockWidget(tr("scratch area"), this);
-    dock2 = new QDockWidget(tr("scratch area"), this);
-    addDockWidget(Qt::BottomDockWidgetArea, dock1 );
-    addDockWidget(Qt::BottomDockWidgetArea, dock2 );
-    scratcharea1 = new QPlainTextEdit(temp1);
-    scratcharea2 = new QPlainTextEdit(temp2);
-    dock1 -> setWidget(scratcharea1);
-    dock2 -> setWidget(scratcharea2);
-    dock1->setFeatures(QDockWidget::NoDockWidgetFeatures);
-    dock2->setFeatures(QDockWidget::NoDockWidgetFeatures);
-    dock1->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
-    dock2->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
-    tabifyDockWidget(dock1, dock2);
-    setTabPosition(Qt::BottomDockWidgetArea, order);
-    QPalette p = textarea->palette();
-    p.setColor(QPalette::Base, Qt::black);
-    p.setColor(QPalette::Text, Qt::magenta);
-    textarea->setPalette(p);
-    textarea->setLineWrapMode(QPlainTextEdit::NoWrap);*/
 }
 
 
 void MainWindow::newFile()
 {
-MainWindow *mainWin = new MainWindow;
-mainWin->show();
+    MainWindow *mainWin = new MainWindow;
+    mainWin->show();
 }
 
-bool MainWindow::okToContinue()
+bool MainWindow::okToContinue() //makes ure user wants to leave file even if it has unsaved changes
 {
     if(isWindowModified())
     {
@@ -986,7 +868,7 @@ bool MainWindow::okToContinue()
     return true;
 }
 
-void MainWindow::open()
+void MainWindow::open() //checks okay to continue.  if yes, then loads file
 {
     if (okToContinue())
     {
@@ -996,37 +878,29 @@ void MainWindow::open()
         setCurrentFile(fileName);
     }
 }
-bool MainWindow::loadFile(const QString &fileName)
+bool MainWindow::loadFile(const QString &fileName) //loads fiel, similar to normal c++ fiel I/O
 {
 
     QFile file(fileName);
-        if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
-           {
-            statusBar() -> showMessage(tr("Loading cancelled"), 2000);
-            return false;
-        }
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        statusBar() -> showMessage(tr("Loading cancelled"), 2000);
+        return false;
+    }
 
-        /*QFile file("box.txt");
- if (file.open(QFile::ReadOnly)) {
-     char buf[1024];
-     qint64 lineLength = file.readLine(buf, sizeof(buf));
-     if (lineLength != -1) {
-         // the line is available in buf
-     }
- } */
-textarea->clear();
-QPalette p = textarea->palette();
-QColor color = p.color(QPalette::Active, QPalette::Text);
-color.setAlpha(0);
-p.setColor(QPalette::Text, color);
-textarea->setPalette(p);
-        QTextStream in(&file);
-        while (!in.atEnd())
-        {
-            QString line = in.readLine();
-            textarea->appendPlainText(line);
-            textarea -> moveCursor (QTextCursor::Start) ;
-        }
+    textarea->clear();
+    QPalette p = textarea->palette();
+    QColor color = p.color(QPalette::Active, QPalette::Text);
+    color.setAlpha(0);
+    p.setColor(QPalette::Text, color);
+    textarea->setPalette(p);
+    QTextStream in(&file);
+    while (!in.atEnd())
+    {
+        QString line = in.readLine();
+        textarea->appendPlainText(line);
+        textarea -> moveCursor (QTextCursor::Start) ;
+    }
     setCurrentFile(fileName);
     statusBar() -> showMessage(tr("File loaded"), 2000);
     textarea -> moveCursor (QTextCursor::Start) ;
@@ -1036,8 +910,8 @@ textarea->setPalette(p);
     textarea->setPalette(p);
     QFileInfo info(file);
     QString string = info.absolutePath();
-whereWeAre->cd(string);
-tree->setRootIndex(model->index(string));
+    whereWeAre->cd(string);
+    tree->setRootIndex(model->index(string));
     currentPath->setText(whereWeAre->absolutePath());
 
     return true;
@@ -1060,9 +934,9 @@ bool MainWindow::saveFile(const QString &fileName)
         return false;
     }
 
-QByteArray temp;
-temp += textarea->toPlainText();
-file.write(temp);
+    QByteArray temp;
+    temp += textarea->toPlainText();
+    file.write(temp);
     setCurrentFile(fileName);
     statusBar() -> showMessage(tr("File saved"), 2000);
     return true;
@@ -1079,27 +953,27 @@ bool MainWindow::saveAs()
 
 void MainWindow::setCurrentFile(const QString &fileName)
 {
-curFile = fileName;
-setWindowModified(false);
-QString shownName = "Untitled";
-if (!curFile.isEmpty())
-{
-shownName = strippedName(curFile);
-MainWindow::recentFiles.removeAll(curFile);
-MainWindow::recentFiles.prepend(curFile);
-foreach (QWidget *win, QApplication::topLevelWidgets())
-{
-if (MainWindow *mainWin = qobject_cast<MainWindow *>(win))
-mainWin->updateRecentFileActions();
-}
-}
-setWindowTitle(tr("%1[*] - %2").arg(shownName)
-.arg(tr("NotepadND")));
+    curFile = fileName;
+    setWindowModified(false);
+    QString shownName = "Untitled";
+    if (!curFile.isEmpty())
+    {
+        shownName = strippedName(curFile);
+        MainWindow::recentFiles.removeAll(curFile);
+        MainWindow::recentFiles.prepend(curFile);
+        foreach (QWidget *win, QApplication::topLevelWidgets())
+        {
+            if (MainWindow *mainWin = qobject_cast<MainWindow *>(win))
+                mainWin->updateRecentFileActions();
+        }
+    }
+    setWindowTitle(tr("%1[*] - %2").arg(shownName)
+                   .arg(tr("NotepadND")));
 }
 
 QString MainWindow::strippedName(const QString &fullFileName)
 {
-return QFileInfo(fullFileName).fileName();
+    return QFileInfo(fullFileName).fileName();
 }
 
 void MainWindow::closeEvent(QCloseEvent *e)
@@ -1113,115 +987,106 @@ void MainWindow::closeEvent(QCloseEvent *e)
 
 void MainWindow::updateRecentFileActions()
 {
-QMutableStringListIterator i(MainWindow::recentFiles);
-while (i.hasNext()) {
-if (!QFile::exists(i.next()))
-i.remove();
-}
-for (int j = 0; j < MaxRecentFiles; ++j)
-{
-if (j < MainWindow::recentFiles.count())
-{
-QString text = tr("&%1 %2")
-.arg(j + 1)
-.arg(strippedName(MainWindow::recentFiles[j]));
-recentFileActions[j]->setText(text);
-recentFileActions[j]->setData(MainWindow::recentFiles[j]);
-recentFileActions[j]->setVisible(true);
-}
-else
-{
-recentFileActions[j]->setVisible(false);
-}
-}
-separatorAction->setVisible(!MainWindow::recentFiles.isEmpty());
+    QMutableStringListIterator i(MainWindow::recentFiles);
+    while (i.hasNext()) {
+        if (!QFile::exists(i.next()))
+            i.remove();
+    }
+    for (int j = 0; j < MaxRecentFiles; ++j)
+    {
+        if (j < MainWindow::recentFiles.count())
+        {
+            QString text = tr("&%1 %2")
+                    .arg(j + 1)
+                    .arg(strippedName(MainWindow::recentFiles[j]));
+            recentFileActions[j]->setText(text);
+            recentFileActions[j]->setData(MainWindow::recentFiles[j]);
+            recentFileActions[j]->setVisible(true);
+        }
+        else
+        {
+            recentFileActions[j]->setVisible(false);
+        }
+    }
+    separatorAction->setVisible(!MainWindow::recentFiles.isEmpty());
 }
 
 void MainWindow::openRecentFile()
 {
-if (okToContinue())
-{
-QAction *action = qobject_cast<QAction *>(sender());
-if (action)
-loadFile(action->data().toString());
-}
+    if (okToContinue())
+    {
+        QAction *action = qobject_cast<QAction *>(sender());
+        if (action)
+            loadFile(action->data().toString());
+    }
 }
 
 void MainWindow::about()
 {
-QMessageBox::about(this, tr("About NotePadND"),
-tr("NotePadND\n"
-"Not yet copyrighted\n"
-"NotePadND is a small text editing application that "
-"created to fulfill the project requirement for "
-"a Fundementals of Computing class at the "
-"University of Notre Dame."));
+    QMessageBox::about(this, tr("About NotePadND"),
+                       tr("NotePadND\n"
+                          "Not yet copyrighted\n"
+                          "NotePadND is a small text editing application that "
+                          "created to fulfill the project requirement for "
+                          "a Fundementals of Computing class at the "
+                          "University of Notre Dame."));
 }
 
 void MainWindow::writeSettings()
 {
-QSettings settings("FundComp", "NotePadND");
-settings.setValue("geometry", geometry());
-settings.setValue("recentFiles", MainWindow::recentFiles);
-settings.setValue("currentScheme", MainWindow::currentScheme);
-//settings.setValue("lineNumbers", MainWindow::lineNumbers);
-//settings.setValue("syntax", MainWindow::syntax);
-//settings.setValue("lineHighlight", MainWindow::lineHighlight);
-//settings.setValue("hidescratch", MainWindow::hidescratch);
-//settings.setValue("linewrap", MainWindow::linewrap);
+    QSettings settings("FundComp", "NotePadND");
+    settings.setValue("geometry", geometry());
+    settings.setValue("recentFiles", MainWindow::recentFiles);
+    settings.setValue("currentScheme", MainWindow::currentScheme);
 
 }
 
 void MainWindow::readSettings()
 {
-QSettings settings("FundComp", "NotePadND");
-QRect rect = settings.value("geometry",
-QRect(200, 200, 400, 400)).toRect();
-move(rect.topLeft());
-resize(rect.size());
-MainWindow::recentFiles = settings.value("recentFiles").toStringList();
-MainWindow::currentScheme = settings.value("currentScheme").toInt();
-//MainWindow::lineNumbers = settings.value("lineNumbers").toInt();
-//MainWindow::syntax = settings.value("syntax").toInt();
-//MainWindow::lineHighlight = settings.value("lineHighlight").toInt();
-//MainWindow::hidescratch = settings.value("hidescratch").toInt();
-//MainWindow::linewrap = settings.value("linewrap").toInt();
+    QSettings settings("FundComp", "NotePadND");
+    QRect rect = settings.value("geometry",
+                                QRect(200, 200, 400, 400)).toRect();
+    move(rect.topLeft());
+    resize(rect.size());
+    MainWindow::recentFiles = settings.value("recentFiles").toStringList();
+    MainWindow::currentScheme = settings.value("currentScheme").toInt();
 
 
-foreach (QWidget *win, QApplication::topLevelWidgets())
-{
-if (MainWindow *mainWin = qobject_cast<MainWindow *>(win))
-mainWin->updateRecentFileActions();
-}
+    foreach (QWidget *win, QApplication::topLevelWidgets())
+    {
+        if (MainWindow *mainWin = qobject_cast<MainWindow *>(win))
+            mainWin->updateRecentFileActions();
+    }
 }
 
-void MainWindow::keyPressEvent(QKeyEvent *p)
+void MainWindow::keyPressEvent(QKeyEvent *p) // allows referencing the last entered commands in the file tree edit
 {int in = p->key();
     int x = lastCommand;
     if( in == Qt::Key_Up && downLocation->hasFocus())
     {if(!commands->isEmpty())
         {
             qDebug() << "entered" << endl;
-           // lastCommandS = new QString(commands[x]);
             downLocation->setText(commands->at(x));
             qDebug() << "entered2" << endl;
-        if(x == 0)
-            lastCommand = commands->size() - 1;
-        else
-            lastCommand--;
+            if(x == 0)
+                lastCommand = commands->size() - 1;
+            else
+                lastCommand--;
         }
     }
     if( in == Qt::Key_Down && downLocation->hasFocus())
     {if(!commands->isEmpty())
         {
             qDebug() << "entered" << endl;
-           // lastCommandS = new QString(commands[x]);
             downLocation->setText(commands->at(x));
             qDebug() << "entered2" << endl;
-        if(lastCommand == commands->size() - 1)
-        {}
-        else
-            lastCommand++;
+            if(lastCommand == commands->size() - 1)
+            {}
+            else
+                lastCommand++;
         }
     }
+}
+MainWindow::~MainWindow()
+{
 }

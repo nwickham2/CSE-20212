@@ -1,3 +1,15 @@
+/*
+Nate Wickham
+Dylan Zaragoza
+Byron Zaragoza
+
+codeeditor.cpp
+5/2/2012
+
+codeeditor.cpp defines the actual text area.  It inherits QPlainTextEdit and all its functions.
+It is sunbclassed primarily so that a spellchecker, line numer area, line highlighter, and bracket match highlighter can be run on the editor.
+*/
+
 #include <QPlainTextEdit>
 #include <QPainter>
 #include <QTextBlock>
@@ -19,43 +31,42 @@
 SpellChecker *spellChecker;
 QList<QAction *> suggestionWordsList;
 QAction *suggestedWord,
-        *addToDict;
+*addToDict;
 QString selectedWord;
 
-CodeEditor::CodeEditor(QWidget *parent) : QPlainTextEdit(parent)
+CodeEditor::CodeEditor(QWidget *parent) : QPlainTextEdit(parent) //constructor
 {
 
-    lineNumberArea = new LineNumberArea(this);
-dolinenums = 0;
-dolinelight = 0;
-    connect(this, SIGNAL(blockCountChanged(int)), this, SLOT(updateLineNumberAreaWidth(int)));
+    lineNumberArea = new LineNumberArea(this); //defines the line number area, asscoiated with the editor
+    dolinenums = 0;
+    dolinelight = 0;
+    connect(this, SIGNAL(blockCountChanged(int)), this, SLOT(updateLineNumberAreaWidth(int))); //create all fo the connections
     connect(this, SIGNAL(updateRequest(QRect,int)), this, SLOT(updateLineNumberArea(QRect,int)));
     connect(this, SIGNAL(cursorPositionChanged()), this, SLOT(highlightCurrentLine()));
 
-    updateLineNumberAreaWidth(0);
-    highlightCurrentLine();
+    updateLineNumberAreaWidth(0); //set lien number width to 0, as there are no lines
+    highlightCurrentLine(); // highlight the current line
 
-    QString dictPath = "C:/Users/Nate/Desktop/hunspell/en_US";
+    QString dictPath = "C:/Users/Nate/Desktop/hunspell/en_US";  // sets the path for sue witht eh grammar check.  the dictionaries, etc
     QString userDict= "C:/Users/Nate/Desktop/hunspell/userDict.txt";
     spellChecker = new SpellChecker(dictPath, userDict);
 
     addToDict = new QAction(tr("Add to dictionary"),this);
     connect(addToDict,SIGNAL(triggered()),this,SLOT(addToDictionary()));
 
-    for (int i = 0; i < suggestionWordsList.count(); ++i)
+    for (int i = 0; i < suggestionWordsList.count(); ++i) //sets the suggested words for the context menu
     {
         suggestionWordsList[i] = new QAction(this);
         suggestionWordsList[i]->setVisible(false);
         connect(suggestionWordsList[i], SIGNAL(triggered()),this, SLOT(replaceWord()));
     }
 
-  //  MyTextHighlighter= new CTextSyntaxHighlighter(this->document());
 }
 
-CodeEditor::CodeEditor(const QString & text, QWidget *parent) : QPlainTextEdit(text, parent)
+CodeEditor::CodeEditor(const QString & text, QWidget *parent) : QPlainTextEdit(text, parent) //constrcutor that takes string as agr, to initlize editor
 {
     lineNumberArea = new LineNumberArea(this);
-dolinenums = 0;
+    dolinenums = 0;
     connect(this, SIGNAL(blockCountChanged(int)), this, SLOT(updateLineNumberAreaWidth(int)));
     connect(this, SIGNAL(updateRequest(QRect,int)), this, SLOT(updateLineNumberArea(QRect,int)));
     connect(this, SIGNAL(cursorPositionChanged()), this, SLOT(highlightCurrentLine()));
@@ -66,63 +77,63 @@ dolinenums = 0;
 
 void CodeEditor::uninit()
 {
-updateLineNumberAreaWidth(-1);
-highlightCurrentLine();
+    updateLineNumberAreaWidth(-1); //removes line number area
+    highlightCurrentLine(); // highlights the current line or removes the current line if dolinehighlight is false
 }
 
 void CodeEditor::init()
 {
-    updateLineNumberAreaWidth(0);
-    highlightCurrentLine();
+    updateLineNumberAreaWidth(0);// adds lien number area
+    highlightCurrentLine(); // highlights the current line or removes the current line if dolinehighlight is false
 }
 
 void CodeEditor::setdolines(int x)
 {
-  dolinenums = x;
+    dolinenums = x; //sets dolinenums to passed in value
 }
 
 void CodeEditor::setdolinelight(int x)
 {
-    dolinelight = x;
+    dolinelight = x;//sets dolinelight to passed in value
 }
 
-int CodeEditor::lineNumberAreaWidth()
+int CodeEditor::lineNumberAreaWidth() //finds the width fo the area based on the width of the number of the last visibel line.
 {
     if(dolinenums)
     {
-    int digits = 1;
-    int max = qMax(1, blockCount());
-    while (max >= 10) {
-        max /= 10;
-        ++digits;
-    }
+        int digits = 1;
+        int max = qMax(1, blockCount());
+        while (max >= 10) {
+            max /= 10;
+            ++digits;
+        }
 
-    int space = 3 + fontMetrics().width(QLatin1Char('9')) * digits;
+        int space = 3 + fontMetrics().width(QLatin1Char('9')) * digits;
 
-    return space;
+        return space;
     }
     return 0;
 }
 
-void CodeEditor::updateLineNumberAreaWidth(int /* newBlockCount */)
+void CodeEditor::updateLineNumberAreaWidth(int /* newBlockCount */) //when a new block is added, the width might need to be changed
 {
     setViewportMargins(lineNumberAreaWidth(), 0, 0, 0);
 }
 
-void CodeEditor::replaceWord()
+void CodeEditor::replaceWord() //repalce a word with a possible word from the context menu
 {
     QAction *action = qobject_cast<QAction *>(sender());
     if (action)
         insertPlainText(action->text());
 }
 
-void CodeEditor::addToDictionary()
+void CodeEditor::addToDictionary() //add a word to the dicitonary for later use
 {
     spellChecker->addToUserWordlist(selectedWord);
     insertPlainText(selectedWord);
 }
 
-void CodeEditor::updateTextSpeller()
+void CodeEditor::updateTextSpeller() //updates the spell checker once a new word is added
 {
     QTextCharFormat highlightFormat;
     highlightFormat.setUnderlineColor(QColor("red"));
@@ -167,18 +178,15 @@ void CodeEditor::updateTextSpeller()
             setExtraSelections(esList);
 
             // reset the word highlight
-//            esList.clear();
             setExtraSelections(esList);
 
-                    }
+        }
         cursor.movePosition(QTextCursor::NextWord, QTextCursor::MoveAnchor, 1);
     }
-    //cursor.endEditBlock();
     setTextCursor(oldCursor);
-//    QMessageBox::warning(this,"wait","press OK!");
 }
 
-void CodeEditor::updateLineNumberArea(const QRect &rect, int dy)
+void CodeEditor::updateLineNumberArea(const QRect &rect, int dy) // if the size needs to chaneg, updates the area
 {
     if (dy)
         lineNumberArea->scroll(0, dy);
@@ -189,7 +197,7 @@ void CodeEditor::updateLineNumberArea(const QRect &rect, int dy)
         updateLineNumberAreaWidth(0);
 }
 
-void CodeEditor::resizeEvent(QResizeEvent *e)
+void CodeEditor::resizeEvent(QResizeEvent *e) //called when the window is resized
 {
     QPlainTextEdit::resizeEvent(e);
 
@@ -242,17 +250,17 @@ void CodeEditor::highlightCurrentLine()
     if (!isReadOnly()) {
         QTextEdit::ExtraSelection selection;
 
-        QColor lineColor = QColor(Qt::yellow).lighter(250);
+        QColor lineColor = QColor(Qt::yellow).lighter(250); //the color of the line edit
         if(dolinelight)
-        lineColor.setAlpha(50);
+            lineColor.setAlpha(50);
         else
             lineColor.setAlpha(0);
 
         selection.format.setBackground(lineColor);
-        selection.format.setProperty(QTextFormat::FullWidthSelection, true);
+        selection.format.setProperty(QTextFormat::FullWidthSelection, true); // ensure the whoel block is highlighted
         selection.cursor = textCursor();
         selection.cursor.clearSelection();
-        extraSelections.append(selection);
+        extraSelections.append(selection); //ads to extra selection
     }
 
     setExtraSelections(extraSelections);
@@ -260,36 +268,36 @@ void CodeEditor::highlightCurrentLine()
 }
 
 void CodeEditor::lineNumberAreaPaintEvent(QPaintEvent *event)
- {
+{
     if(dolinenums)
     {
-     QPainter painter(lineNumberArea);
-     painter.fillRect(event->rect(), BackgroundColor);
-     QTextBlock block = firstVisibleBlock();
-          int blockNumber = block.blockNumber();
-          int top = (int) blockBoundingGeometry(block).translated(contentOffset()).top();
-          int bottom = top + (int) blockBoundingRect(block).height();
-          while (block.isValid() && top <= event->rect().bottom()) {
-              if (block.isVisible() && bottom >= event->rect().top()) {
-                  QString number = QString::number(blockNumber + 1);
-                  painter.setPen(NumbersColor);
-                  painter.drawText(0, top, lineNumberArea->width(), fontMetrics().height(),
-                                   Qt::AlignRight, number);
-              }
+        QPainter painter(lineNumberArea);
+        painter.fillRect(event->rect(), BackgroundColor);
+        QTextBlock block = firstVisibleBlock();
+        int blockNumber = block.blockNumber();
+        int top = (int) blockBoundingGeometry(block).translated(contentOffset()).top();
+        int bottom = top + (int) blockBoundingRect(block).height();
+        while (block.isValid() && top <= event->rect().bottom()) {
+            if (block.isVisible() && bottom >= event->rect().top()) {
+                QString number = QString::number(blockNumber + 1);
+                painter.setPen(NumbersColor);
+                painter.drawText(0, top, lineNumberArea->width(), fontMetrics().height(),
+                                 Qt::AlignRight, number);
+            }
 
-              block = block.next();
-              top = bottom;
-              bottom = top + (int) blockBoundingRect(block).height();
-              ++blockNumber;
-          }
+            block = block.next();
+            top = bottom;
+            bottom = top + (int) blockBoundingRect(block).height();
+            ++blockNumber;
+        }
     }
-      }
+}
 void CodeEditor::setColors(int x)
 {
     if(x ==1)
     {
-BackgroundColor.setRgb(214, 214, 214);
-NumbersColor.setRgb(255, 0, 255);
+        BackgroundColor.setRgb(214, 214, 214);
+        NumbersColor.setRgb(255, 0, 255);
     }
     else if(x == 2)
     {
@@ -407,12 +415,12 @@ void CodeEditor::createParenthesisSelection(int pos)
 void CodeEditor::deleteHighlighter(bool x)
 {
     int y;
-    if(x == false)// && MyTextHighlighter)
+    if(x == false)
     {
         delete MyTextHighlighter;
         y = 0;
     }
-    else if(x == true)// && !MyTextHighlighter)
+    else if(x == true)
     {
         MyTextHighlighter= new CTextSyntaxHighlighter(this->document());
         y = 1;
